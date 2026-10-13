@@ -11,7 +11,7 @@ Dataset Provenance:
   - 40 Academic Benchmark Subjects (P002-P041, AT&T Cambridge standardized face benchmark)
   Total: 41 subjects, 410 authentic photographic captures.
 
-Data Partitioning (Identity-Disjoint & Zero Leakage):
+Data Partitioning (Capture-Disjoint Genuine Probes, Identity-Disjoint Impostors & Zero Leakage):
   - Gallery (Enrollment): 20 subjects (P001-P020), 2 images/subject = 40 images (indices [0, 1])
   - Validation Split:
       * 20 enrolled subjects x 3 probe images = 60 genuine probes (indices [2, 3, 4])
@@ -281,7 +281,7 @@ def run_experiment():
     B_stage1_auto_TR = int((df_test[impostor_mask]["method_B_stage1"] == "UNKNOWN").sum())
 
     # Stage 2: Post-Review Simulated Instructor Verification
-    # Instructor inspects all 57 REVIEW_REQUIRED events:
+    # Instructor inspects all 56 REVIEW_REQUIRED events (23 genuine, 33 impostor):
     # - Genuine probes where top match is correct -> confirmed as PRESENT (rescued!)
     # - Genuine probes where top match was unverified/wrong -> rejected
     # - Impostor probes -> rejected as REJECTED (reviewed)
@@ -300,12 +300,12 @@ def run_experiment():
                                   (df_test[impostor_mask]["method_B_post_review"] == "REJECTED (reviewed)")).sum())
 
     # Final post-review metrics
-    B_post_TA_id = B_stage1_auto_TA_id + B_rescued_TA_id   # 66 + 12 = 78
+    B_post_TA_id = B_stage1_auto_TA_id + B_rescued_TA_id   # e.g., 65 + 12 = 77
     B_post_Misid = B_stage1_auto_Misid                     # 7 (auto-accepted >= 0.65)
-    B_post_TA_bin = B_post_TA_id + B_post_Misid            # 85
+    B_post_TA_bin = B_post_TA_id + B_post_Misid            # 84
     B_post_FA = B_stage1_auto_FA                           # 18 (auto-accepted >= 0.65)
-    B_post_FR = B_stage1_auto_FR + B_rev_rejected_genuine  # 4 + 11 = 15
-    B_post_TR = B_stage1_auto_TR + B_rev_blocked_impostor  # 14 + 34 = 48
+    B_post_FR = B_stage1_auto_FR + B_rev_rejected_genuine  # 5 + 11 = 16
+    B_post_TR = B_stage1_auto_TR + B_rev_blocked_impostor  # 15 + 33 = 48
 
     # 1) Identity-Specific Identification
     B_prec_id = B_post_TA_id / (B_post_TA_id + B_post_Misid + B_post_FA) if (B_post_TA_id + B_post_Misid + B_post_FA) > 0 else 0.0
@@ -341,11 +341,11 @@ def run_experiment():
     print(f"  False Rejects (Marked UNKNOWN)  : {A_FR} / {N_gen} ({A_FR/N_gen*100:.1f}%)")
     print(f"  True Rejects (Impostor UNKNOWN) : {A_TR} / {N_imp} ({A_TR/N_imp*100:.1f}%)")
     print(f"  False Accepts (Impostor PRESENT): {A_FA} / {N_imp} ({A_far*100:.1f}%)")
-    print(f"  Identity-Specific Precision     : {A_prec_id:.4f} (66 / (66 + 7 + 18))")
-    print(f"  Identity-Specific Recall        : {A_rec_id:.4f} (66 / 100)")
+    print(f"  Identity-Specific Precision     : {A_prec_id:.4f} ({A_TA_id} / ({A_TA_id} + {A_Misid} + {A_FA}))")
+    print(f"  Identity-Specific Recall        : {A_rec_id:.4f} ({A_TA_id} / {N_gen})")
     print(f"  Identity-Specific F1-Score      : {A_f1_id:.4f}")
-    print(f"  Binary Attendance Precision     : {A_prec_bin:.4f} (73 / (73 + 18))")
-    print(f"  Binary Attendance Recall        : {A_rec_bin:.4f} (73 / 100)")
+    print(f"  Binary Attendance Precision     : {A_prec_bin:.4f} ({A_TA_bin} / ({A_TA_bin} + {A_FA}))")
+    print(f"  Binary Attendance Recall        : {A_rec_bin:.4f} ({A_TA_bin} / {N_gen})")
     print(f"  Binary Attendance F1-Score      : {A_f1_bin:.4f}")
     print(f"  Overall Accuracy                : {A_acc*100:.2f}%")
     print(f"  False Accept Rate (FAR)         : {A_far*100:.2f}%")
@@ -369,11 +369,11 @@ def run_experiment():
     print(f"  Final False Rejections            : {B_post_FR} / {N_gen} ({B_frr*100:.1f}%) [Reduced from {A_FR + A_Misid}]")
     print(f"  Final False Accepts               : {B_post_FA} / {N_imp} ({B_far*100:.1f}%)")
     print(f"  Final True Rejects                : {B_post_TR} / {N_imp} ({B_post_TR/N_imp*100:.1f}%)")
-    print(f"  Identity-Specific Precision       : {B_prec_id:.4f} (78 / (78 + 7 + 18))")
-    print(f"  Identity-Specific Recall          : {B_rec_id:.4f} (78 / 100)")
+    print(f"  Identity-Specific Precision       : {B_prec_id:.4f} ({B_post_TA_id} / ({B_post_TA_id} + {B_post_Misid} + {B_post_FA}))")
+    print(f"  Identity-Specific Recall          : {B_rec_id:.4f} ({B_post_TA_id} / {N_gen})")
     print(f"  Identity-Specific F1-Score        : {B_f1_id:.4f}")
-    print(f"  Binary Attendance Precision       : {B_prec_bin:.4f} (85 / (85 + 18))")
-    print(f"  Binary Attendance Recall          : {B_rec_bin:.4f} (85 / 100)")
+    print(f"  Binary Attendance Precision     : {B_prec_bin:.4f} ({B_post_TA_bin} / ({B_post_TA_bin} + {B_post_FA}))")
+    print(f"  Binary Attendance Recall          : {B_rec_bin:.4f} ({B_post_TA_bin} / {N_gen})")
     print(f"  Binary Attendance F1-Score        : {B_f1_bin:.4f}")
     print(f"  Overall Accuracy                  : {B_acc*100:.2f}%")
 

@@ -28,7 +28,7 @@ The evaluation rigorously tests the primary research hypothesis of SmartAttend:
 
 ## 3. Separation of Gallery, Validation, and Held-Out Test Splits
 
-To prevent image leakage and threshold overfitting, partitions are strictly identity-disjoint and capture-disjoint:
+To prevent image leakage and threshold overfitting, partitions enforce capture-disjoint genuine probes and identity-disjoint impostor cohorts:
 
 | Partition | Subject IDs | Capture Indices | Probe Count | Purpose |
 |---|---|---|---|---|
@@ -53,7 +53,7 @@ To prevent image leakage and threshold overfitting, partitions are strictly iden
   - If $0.52 \le s < 0.65$: Routed to `REVIEW_REQUIRED` (queued for instructor audit).
   - If $< 0.52$: Auto-Rejected as `UNKNOWN`.
 - **Stage 2 (Post-Review Human Audit):**
-  - Instructor audits the 55 queued items. True genuine matches are verified as `PRESENT` (rescued from absence); impostor intrusions are rejected.
+  - Instructor audits the 56 queued items (23 genuine, 33 impostor). True genuine matches are verified as `PRESENT` (12 rescued from absence); impostor intrusions (33) are rejected.
 
 ---
 
@@ -80,17 +80,17 @@ To prevent image leakage and threshold overfitting, partitions are strictly iden
 
 | Metric | Method A: Recognition-Only ($\tau = 0.65$) | Method B: Stage 1 (Automated) | Method B: Stage 2 (Post-Review) | Impact of SmartAttend Policy |
 |---|---|---|---|---|
-| **True Accepts (Identity Match)** | 66 / 100 (66.0%) | 66 / 100 (66.0%) | **78 / 100 (78.0%)** | **+12 genuine students rescued** |
+| **True Accepts (Identity Match)** | 65 / 100 (65.0%) | 65 / 100 (65.0%) | **77 / 100 (77.0%)** | **+12 genuine students rescued** |
 | **Misidentifications** | 7 / 100 (7.0%) | 7 / 100 (7.0%) | 7 / 100 (7.0%) | High-similarity errors isolated |
-| **False Rejections (Absences)** | 27 / 100 (27.0%) | 4 / 100 (4.0% auto) | **15 / 100 (15.0%)** | **Cut from 34.0% down to 15.0%** |
-| **Impostors Routed to Review** | 0 (0.0%) | **32 / 66 (48.5%)** | 0 (Audited) | **32 impostors stopped from auto-login** |
-| **Impostor False Accepts** | 20 / 66 (30.3%) | 20 / 66 (30.3%) | 20 / 66 (30.3%) | Confined to high-similarity tail ($\ge 0.65$) |
-| **Impostor True Rejects** | 46 / 66 (69.7%) | 14 / 66 (21.2% auto) | **46 / 66 (69.7%)** | Maintained strong stranger rejection |
-| **Review Queue Workload** | 0 / 166 (0.0%) | **55 / 166 (33.13%)** | 55 audited | Quantified human workload |
-| **Identity-Specific Precision** | 0.7097 (66/93) | — | **0.7429 (78/105)** | **+3.32%** |
-| **Identity-Specific Recall** | 0.6600 (66/100) | — | **0.7800 (78/100)** | **+12.00%** |
-| **Identity-Specific F1-Score** | 0.6839 | — | **0.7610** | **+7.71%** |
-| **Binary Attendance Precision** | 0.7849 (73/93) | — | **0.8095 (85/105)** | **+2.46%** |
-| **Binary Attendance Recall** | 0.7300 (73/100) | — | **0.8500 (85/100)** | **+12.00%** |
-| **Binary Attendance F1-Score** | 0.7565 | — | **0.8293** | **+7.28%** |
-| **Overall Accuracy** | 67.47% | — | **74.70%** | **+7.23%** |
+| **False Rejections (Absences)** | 28 / 100 (28.0%) | 5 / 100 (5.0% auto) | **16 / 100 (16.0%)** | **Cut from 35.0% down to 16.0%** |
+| **Impostors Routed to Review** | 0 (0.0%) | **33 / 66 (50.0%)** | 0 (Audited) | **33 impostors stopped from auto-login** |
+| **Impostor False Accepts** | 18 / 66 (27.3%) | 18 / 66 (27.3%) | 18 / 66 (27.3%) | Confined to high-similarity tail ($\ge 0.65$) |
+| **Impostor True Rejects** | 48 / 66 (72.7%) | 15 / 66 (22.7% auto) | **48 / 66 (72.7%)** | Maintained strong stranger rejection |
+| **Review Queue Workload** | 0 / 166 (0.0%) | **56 / 166 (33.73%)** | 56 audited | Quantified human workload |
+| **Identity-Specific Precision** | 0.7222 (65/90) | — | **0.7549 (77/102)** | **+3.27%** |
+| **Identity-Specific Recall** | 0.6500 (65/100) | — | **0.7700 (77/100)** | **+12.00%** |
+| **Identity-Specific F1-Score** | 0.6842 | — | **0.7624** | **+7.82%** |
+| **Binary Attendance Precision** | 0.8000 (72/90) | — | **0.8235 (84/102)** | **+2.35%** |
+| **Binary Attendance Recall** | 0.7200 (72/100) | — | **0.8400 (84/100)** | **+12.00%** |
+| **Binary Attendance F1-Score** | 0.7579 | — | **0.8317** | **+7.38%** |
+| **Overall Accuracy** | 68.07% | — | **75.30%** | **+7.23%** |
