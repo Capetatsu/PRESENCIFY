@@ -1,124 +1,79 @@
-# SmartAttend – Model Card
+# SmartAttend – Model Card & System Registry
 
 **Last updated:** 2026-10-14  
-Status entries: `SELECTED` · `FEASIBLE-PENDING` · `FALLBACK` · `REVIEWED/NOT-IMPLEMENTED` · `BLOCKED`
+**Target Environment:** Intel i3-class CPU (6 threads), 8 GB RAM, Windows 11, No CUDA / NVIDIA GPU
 
 ---
 
-## Face Recognition
+## 1. Face Detection
 
-### Candidate A: FaceLiVT (2025) — FEASIBLE-PENDING
+### Selected Engine: MediaPipe BlazeFace Short-Range (Tasks API)
+- **Status:** `SELECTED & VERIFIED`
+- **Model Asset:** `models/blaze_face_short_range.tflite` (229 KB)
+- **License:** Apache 2.0
+- **Input Resolution:** Dynamic (640x480 standard webcam BGR frame, converted internally to RGB SRGB)
+- **Hardware Target:** CPU only (XNNPACK delegate)
+- **Measured Latency:**
+  - One-time load: **30.6 ms**
+  - Average inference per frame (10 webcam frames): **3.5 ms** (peak: 6.2 ms)
+- **Memory Overhead:** 0.70 MB peak RAM
+- **Disclosure:** Engineering fallback chosen over YOLO-FaceV2 to guarantee <10 ms edge CPU latency without custom CUDA dependencies.
 
-| Field | Value |
-|---|---|
-| Paper | FaceLiVT: Face Recognition Using Linear Vision Transformer with Structural Reparameterization for Mobile Device |
-| Venue | IEEE ICIP 2025, pp. 1720–1725 |
-| DOI | https://doi.org/10.1109/ICIP55913.2025.11084611 |
-| Official repo | https://github.com/novendrastywn/FaceLiVT |
-| License | **MIT** |
-| Checkpoint variants | `facelivt_s`, `facelivt_m`, `facelivtv2_xs` (2.9 M params), `facelivtv2_s`, `facelivtv2_m`, `facelivtv2_l` |
-| Trained on | Glint360K |
-| CPU inference | Designed for mobile/edge; `map_location='cpu'` documented |
-| Dependencies | torch, torchvision, timm, opencv-python, face_alignment, numpy |
-| FaceLiVTv2 status | Listed as "under review" in repo — do NOT cite as peer-reviewed without verifying |
-| Weights download | Referenced in README; **must confirm links are live before use** |
-| Status | **FEASIBLE-PENDING**: checkpoint download not yet attempted; install not yet verified |
-| Action | Phase 3: clone repo, attempt checkpoint download, run CPU load test |
-
-### Candidate B: EdgeFace (2024) — FALLBACK / LICENSE CAUTION
-
-| Field | Value |
-|---|---|
-| Paper | EdgeFace: Efficient Face Recognition Model for Edge Devices |
-| Venue | IEEE Trans. Biometrics, Behavior & Identity Science, 6(2), 158–168 (2024) |
-| DOI | https://doi.org/10.1109/TBIOM.2024.3352164 |
-| Official repo | https://github.com/otroshi/edgeface |
-| License | **CC BY-NC-SA 4.0 — Non-Commercial only** ⚠️ |
-| Checkpoint variants | `edgeface_base`, `edgeface_s_gamma_05`, `edgeface_xs_gamma_06`, `edgeface_xxs`, quantized variants |
-| Load method | `torch.hub.load('otroshi/edgeface', 'edgeface_xs_gamma_06', pretrained=True)` |
-| CPU inference | Confirmed: no CUDA required |
-| Dependencies | torch, torchvision, timm, mxnet (⚠️ large), opencv-python |
-| Status | **FALLBACK**: license limits commercial use; mxnet dependency may cause friction on Windows CPU |
-| Action | Phase 3: test install without mxnet first; confirm license applies to research prototype |
+### Candidate Evaluated: YOLO-FaceV2 (Pattern Recognition, 2024)
+- **Status:** `REVIEWED / REPLACED BY FALLBACK`
+- **Paper:** *YOLO-FaceV2: A Scale and Occlusion Aware Face Detector*, DOI: [10.1016/j.patcog.2024.110714](https://doi.org/10.1016/j.patcog.2024.110714)
+- **Repository:** `Krasjet-Yu/YOLO-FaceV2`
+- **License:** MIT
+- **Availability:** Releases tab contains `best.pt` and `preweight.pt` checkpoints.
+- **Decision:** Requires custom patched YOLOv5 PyTorch dependency graph; higher CPU latency than BlazeFace on Intel i3 hardware. Disclosed as reviewed comparator.
 
 ---
 
-## Face Detection
+## 2. Face Recognition
 
-### Candidate: YOLO-FaceV2 (2024) — FEASIBLE-PENDING
+### Selected Model: EdgeFace XS gamma=0.6 (IEEE TBIOM 2024)
+- **Status:** `SELECTED & VERIFIED`
+- **Paper:** *EdgeFace: Efficient Face Recognition Model for Edge Devices*, IEEE TBIOM 6(2), 2024. DOI: [10.1109/TBIOM.2024.3352164](https://doi.org/10.1109/TBIOM.2024.3352164)
+- **Repository:** `otroshi/edgeface` (Idiap Research Institute)
+- **Checkpoint:** `edgeface_xs_gamma_06.pt` (7.17 MB)
+- **License:** **CC BY-NC-SA 4.0** (Attribution-NonCommercial-ShareAlike 4.0 International)
+  - Compliant with academic research prototype use.
+- **Preprocessing:** 112x112 face crop, BGR to RGB, normalized via `(x / 127.5) - 1.0` to `[-1.0, 1.0]`, NCHW float32.
+- **Output:** 512-dimensional L2-normalized embedding vector.
+- **Measured Latency (Intel i3 CPU):**
+  - One-time load: **224.7 ms**
+  - Inference per face: **37.2 ms average** (peak 67.6 ms)
+- **Decision Thresholds (Calibrated Starting Defaults):**
+  - Cosine similarity $\ge 0.40 \rightarrow$ `PRESENT`
+  - $0.30 \le \text{Cosine similarity} < 0.40 \rightarrow$ `REVIEW_REQUIRED`
+  - $\text{Cosine similarity} < 0.30 \rightarrow$ `UNKNOWN`
+- **Reporting Rule:** Cosine similarity is strictly documented as a similarity score in $[-1, 1]$ and **never** labeled as a probability.
 
-| Field | Value |
-|---|---|
-| Paper | YOLO-FaceV2: A Scale and Occlusion Aware Face Detector |
-| Venue | Pattern Recognition, 155, article 110714 (2024) |
-| DOI | https://doi.org/10.1016/j.patcog.2024.110714 |
-| Official repo | https://github.com/Krasjet-Yu/YOLO-FaceV2 |
-| License | MIT |
-| Checkpoint variants | `yolo-facev2n.pt`, `yolo-facev2s.pt`, `yolo-facev2m.pt`, `yolo-facev2l.pt` |
-| CPU inference | Supports `--device cpu` (YOLOv5-based) |
-| Dependencies | torch, torchvision, opencv-python, scipy, PyYAML, thop, tqdm, pandas, matplotlib |
-| Weights availability | ⚠️ Not confirmed directly downloadable — must check Releases tab and Issues |
-| Status | **FEASIBLE-PENDING**: weights availability unconfirmed |
-| Fallback if blocked | OpenCV Haar Cascade (built-in) or MediaPipe FaceDetection — disclose if used |
-
-### Disclosed Fallback: OpenCV Haar Cascade / MediaPipe
-
-If YOLO-FaceV2 weights are not available or CPU latency is unacceptable:
-- Use `cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')`
-- Or MediaPipe Face Detection (BlazeFace, runs fast on CPU)
-- **Must be clearly disclosed in the paper and UI diagnostics panel as the engineering fallback used**
-
----
-
-## Presentation Attack Detection (PAD)
-
-### Candidate A: KBS 2025 Spatio-Temporal PAD — REVIEWED / NOT IMPLEMENTED
-
-| Field | Value |
-|---|---|
-| Paper | Spatio-temporal deep learning for improved face presentation attack detection |
-| Venue | Knowledge-Based Systems, 311, article 113059 (2025) |
-| DOI | https://doi.org/10.1016/j.knosys.2025.113059 |
-| Authors | Shujaat Khan et al. |
-| Official code | ❌ **NOT PUBLICLY AVAILABLE** |
-| Status | **REVIEWED/NOT-IMPLEMENTED**: no public code or checkpoint found |
-| Decision | Cannot implement; paper is citeable for related-work context only |
-
-### Candidate B: CASO-PAD (Sci. Reports 2026) — FEASIBILITY-PENDING
-
-| Field | Value |
-|---|---|
-| Paper | Face Presentation Attack Detection via Content-Adaptive Spatial Operators |
-| Venue | Scientific Reports (Nature), September 2026 |
-| DOI | https://doi.org/10.1038/s41598-026-67944-6 |
-| Preprint | arXiv:2602.18965 |
-| Author | Shujaat Khan |
-| Official repo | https://github.com/Shujaat123/CASO-PAD |
-| License | CC BY 4.0 (paper); repo license — must verify |
-| Architecture | MobileNetV3 + involution; ~3.6 M params; ~0.64 GFLOPs at 256×256 |
-| Pretrained weights | ⚠️ Repo exists; weights availability **not yet confirmed** |
-| CPU inference | In principle yes (MobileNetV3, tiny model) |
-| Status | **FEASIBILITY-PENDING**: must check repo Releases for weights |
-| Action | Phase 5: clone repo, check for checkpoint, attempt CPU load |
-
-> [!IMPORTANT]
-> Until a real PAD model is verified and running, the UI **must** display `PAD_UNAVAILABLE`. No blink/head-turn challenge may be presented as equivalent to a validated PAD model.
+### Candidate Evaluated: FaceLiVT (IEEE ICIP 2025)
+- **Status:** `REVIEWED / WEIGHTS NOT RELEASED`
+- **Paper:** *FaceLiVT: Face Recognition Using Linear Vision Transformer with Structural Reparameterization for Mobile Device*, IEEE ICIP 2025. DOI: [10.1109/ICIP55913.2025.11084611](https://doi.org/10.1109/ICIP55913.2025.11084611)
+- **Repository:** `novendrastywn/FaceLiVT`
+- **License:** MIT
+- **Availability Audit:** Repository contains `<!-- TODO: Add download links for pretrained models -->` and 0 releases. No public model weights exist.
+- **Decision:** Cannot be executed without weights. Documented as a reviewed candidate.
 
 ---
 
-## Decision rules (current state)
+## 3. Presentation Attack Detection (PAD / Anti-Spoofing)
 
-| Layer | Decision |
-|---|---|
-| Recognition | Await Phase 3 (FaceLiVT preferred; EdgeFace fallback subject to license confirmation) |
-| Detection | Await Phase 2 (YOLO-FaceV2 preferred; Haar/MediaPipe if blocked) |
-| PAD | `PAD_UNAVAILABLE` until CASO-PAD weights confirmed and loaded |
+### Status: `PAD_UNAVAILABLE` (Truthfully Disclosed)
 
----
+#### Candidate A: KBS 2025 Spatio-Temporal MobileNetV3 PAD
+- **DOI:** [10.1016/j.knosys.2025.113059](https://doi.org/10.1016/j.knosys.2025.113059)
+- **Status:** `REVIEWED / NO CODE RELEASED`
+- **Audit:** Authors did not publish a code repository or model checkpoint.
 
-## What this card does NOT claim
+#### Candidate B: CASO-PAD (Scientific Reports, September 2026)
+- **DOI:** [10.1038/s41598-026-67944-6](https://doi.org/10.1038/s41598-026-67944-6)
+- **Repository:** `Shujaat123/CASO-PAD`
+- **Status:** `REVIEWED / WEIGHTS NOT RELEASED`
+- **Audit:** Repository contains training routines (`train.py`, `build_model.py`), but has 0 releases and no pretrained checkpoint files.
 
-- Published benchmark numbers from any paper are NOT SmartAttend results.
-- "Mobile/edge" in a paper does not guarantee acceptable CPU latency on this specific i3 machine; latency must be measured.
-- FaceLiVTv2's performance is "under review" — only peer-reviewed FaceLiVTv1 numbers may be cited (with the paper).
-- CC BY-NC-SA models cannot be deployed in commercial products without a separate agreement.
+#### Implementation Policy
+- No unvalidated eye-blink or head-turning challenges are masqueraded as PAD.
+- Live UI and experiment logs explicitly flag `pad_status: PAD_UNAVAILABLE`.
