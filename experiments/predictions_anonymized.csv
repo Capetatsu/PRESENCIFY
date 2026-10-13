@@ -1,0 +1,2 @@
+event_id,session_id,pseudonym,status,similarity_score,similarity_threshold,pad_status,is_accepted,frame_index,recorded_at
+1,b05f247a-c4cf-46dc-a48f-320a6607142d,P099,PRESENT,0.88,0.4,PAD_UNAVAILABLE,True,1,2026-10-13T19:32:11.092491

@@ -17,7 +17,6 @@ models/*.pt
 models/*.pth
 models/*.onnx
 models/*.bin
-experiments/predictions_anonymized.csv
 experiments/raw_frames/
 logs/
 *.log

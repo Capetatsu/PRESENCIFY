@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "timestamp": "2026-10-13T19:20:12Z",
+    "timestamp": "2026-10-13T19:28:47Z",
     "evaluation_protocol": "Open-set identification with separate Gallery, Validation, and Held-out Test sets",
     "enrolled_subjects_count": 20,
     "unenrolled_subjects_count": 11,
@@ -10,38 +10,63 @@
     "hardware": "Intel i3-class CPU (6 threads), 8 GB RAM, Windows 11, PyTorch CPU"
   },
   "method_A_recognition_only": {
-    "true_accepts": 66,
-    "false_rejects": 27,
+    "true_accepts_identity": 64,
     "misidentifications": 7,
+    "true_accepts_binary": 71,
+    "false_rejects": 29,
     "true_rejects": 48,
     "false_accepts": 18,
-    "precision": 0.7253,
-    "recall": 0.66,
-    "f1_score": 0.6911,
-    "accuracy": 0.6867,
+    "precision_identity": 0.7191,
+    "recall_identity": 0.64,
+    "f1_identity": 0.6772,
+    "precision_binary": 0.7978,
+    "recall_binary": 0.71,
+    "f1_binary": 0.7513,
+    "accuracy": 0.6747,
     "far_percent": 27.27,
-    "frr_percent": 34.0
+    "frr_percent": 36.0
   },
   "method_B_confidence_review": {
-    "review_queue_count": 57,
-    "review_rate_percent": 34.34,
-    "auto_stage_false_accepts": 18,
-    "post_review_true_accepts": 85,
-    "post_review_false_rejects": 15,
-    "post_review_true_rejects": 48,
-    "post_review_false_accepts": 18,
-    "precision": 0.8252,
-    "recall": 0.85,
-    "f1_score": 0.8374,
-    "accuracy": 0.8012,
-    "far_percent": 27.27,
-    "frr_percent": 15.0
+    "stage1_automated": {
+      "auto_accepted_genuine_correct": 64,
+      "auto_accepted_genuine_misid": 7,
+      "auto_accepted_impostor_fa": 18,
+      "review_queue_genuine": 25,
+      "review_queue_impostor": 33,
+      "review_queue_total": 58,
+      "review_rate_percent": 34.94,
+      "auto_rejected_genuine": 4,
+      "auto_rejected_impostor": 15
+    },
+    "stage2_post_review": {
+      "rescued_genuine_into_present": 14,
+      "blocked_impostor_into_rejected": 33,
+      "final_true_accepts_identity": 78,
+      "final_misidentifications": 7,
+      "final_true_accepts_binary": 85,
+      "final_false_rejects": 15,
+      "final_true_rejects": 48,
+      "final_false_accepts": 18,
+      "precision_identity": 0.7573,
+      "recall_identity": 0.78,
+      "f1_identity": 0.7685,
+      "precision_binary": 0.8252,
+      "recall_binary": 0.85,
+      "f1_binary": 0.8374,
+      "accuracy": 0.759,
+      "far_percent": 27.27,
+      "frr_percent": 15.0
+    }
   },
   "latency_ms": {
-    "mean": 21.31,
-    "median": 20.03,
-    "std": 7.62,
-    "min": 9.51,
-    "max": 80.29
+    "embedding_inference_mean": 26.59,
+    "embedding_inference_median": 21.19,
+    "embedding_inference_std": 19.08,
+    "embedding_inference_min": 12.97,
+    "embedding_inference_max": 197.13,
+    "detector_inference_mean": 3.5,
+    "alignment_mean": 0.8,
+    "total_computational_latency_mean": 30.89,
+    "throughput_fps": 32.4
   }
 }
