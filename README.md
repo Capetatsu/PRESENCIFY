@@ -56,20 +56,20 @@ Evaluated under an open-set identification protocol across **41 subjects (410 ca
 
 | Metric | Method A: Recognition-Only ($\tau = 0.65$) | Method B: Stage 1 (Automated) | Method B: Stage 2 (Post-Review) | Impact of SmartAttend Policy |
 |---|---|---|---|---|
-| **True Accepts (ID Match)** | 64 / 100 (64.0%) | 64 / 100 (64.0%) | **78 / 100 (78.0%)** | **+14 genuine students rescued** |
+| **True Accepts (ID Match)** | 66 / 100 (66.0%) | 66 / 100 (66.0%) | **78 / 100 (78.0%)** | **+12 genuine students rescued** |
 | **Misidentifications** | 7 / 100 (7.0%) | 7 / 100 (7.0%) | 7 / 100 (7.0%) | Isolated in high-confidence tail |
-| **False Rejections (Absence)** | 29 / 100 (29.0%) | 4 / 100 (4.0% auto) | **15 / 100 (15.0%)** | **Cut from 36.0% down to 15.0%** |
-| **Impostors Routed to Review**| 0 (0.0%) | **33 / 66 (50.0%)** | 0 (Audited) | **33 impostors stopped from auto-login** |
-| **Impostor False Accepts** | 18 / 66 (27.3%) | 18 / 66 (27.3%) | 18 / 66 (27.3%) | High-similarity tail |
-| **Impostor True Rejects** | 48 / 66 (72.7%) | 15 / 66 (22.7% auto) | **48 / 66 (72.7%)** | Maintained strong stranger rejection |
-| **Review Queue Workload** | 0 / 166 (0.0%) | **58 / 166 (34.94%)** | 58 audited | Quantified human workload |
-| **Identity-Specific Precision**| 0.7191 (64/89) | — | **0.7573 (78/103)** | **+3.82%** |
-| **Identity-Specific Recall** | 0.6400 (64/100) | — | **0.7800 (78/100)** | **+14.00%** |
-| **Identity-Specific F1-Score** | 0.6772 | — | **0.7685** | **+9.13%** |
-| **Binary Attendance Precision** | 0.7978 (71/89) | — | **0.8252 (85/103)** | **+2.74%** |
-| **Binary Attendance Recall** | 0.7100 (71/100) | — | **0.8500 (85/100)** | **+14.00%** |
-| **Binary Attendance F1-Score** | 0.7513 | — | **0.8374** | **+8.61%** |
-| **Overall Accuracy** | 67.47% | — | **75.90%** | **+8.43%** |
+| **False Rejections (Absence)** | 27 / 100 (27.0%) | 4 / 100 (4.0% auto) | **15 / 100 (15.0%)** | **Cut from 34.0% down to 15.0%** |
+| **Impostors Routed to Review**| 0 (0.0%) | **32 / 66 (48.5%)** | 0 (Audited) | **32 impostors stopped from auto-login** |
+| **Impostor False Accepts** | 20 / 66 (30.3%) | 20 / 66 (30.3%) | 20 / 66 (30.3%) | High-similarity tail ($\ge 0.65$) |
+| **Impostor True Rejects** | 46 / 66 (69.7%) | 14 / 66 (21.2% auto) | **46 / 66 (69.7%)** | Maintained strong stranger rejection |
+| **Review Queue Workload** | 0 / 166 (0.0%) | **55 / 166 (33.13%)** | 55 audited | Quantified human workload |
+| **Identity-Specific Precision**| 0.7097 (66/93) | — | **0.7429 (78/105)** | **+3.32%** |
+| **Identity-Specific Recall** | 0.6600 (66/100) | — | **0.7800 (78/100)** | **+12.00%** |
+| **Identity-Specific F1-Score** | 0.6839 | — | **0.7610** | **+7.71%** |
+| **Binary Attendance Precision** | 0.7849 (73/93) | — | **0.8095 (85/105)** | **+2.46%** |
+| **Binary Attendance Recall** | 0.7300 (73/100) | — | **0.8500 (85/100)** | **+12.00%** |
+| **Binary Attendance F1-Score** | 0.7565 | — | **0.8293** | **+7.28%** |
+| **Overall Accuracy** | 67.47% | — | **74.70%** | **+7.23%** |
 
 ---
 
@@ -81,10 +81,10 @@ Measured on an Intel i3-class dual/quad-core CPU (6 execution threads, PyTorch C
 |---|---|---|---|
 | **Face Detection** | MediaPipe BlazeFace (`blaze_face_short_range.tflite`, 229 KB) | **3.5 ms** | 3.2 ms |
 | **Facial Alignment** | Keypoint Partial Affine (112×112, $[-1, 1]$ float32) | **0.8 ms** | 0.7 ms |
-| **Feature Extraction** | EdgeFace XS $\gamma=0.6$ (`edgeface_xs_gamma_06.pt`, 7.17 MB) | **26.6 ms** | 21.2 ms |
+| **Feature Extraction** | EdgeFace XS $\gamma=0.6$ (`edgeface_xs_gamma_06.pt`, 7.17 MB) | **25.9 ms** | 21.4 ms |
 | **Gallery Search** | Cosine similarity across 20 enrolled gallery templates | **< 0.05 ms** | < 0.05 ms |
-| **Total Computation** | **End-to-end algorithmic frame processing** | **~30.9 ms** | **~25.1 ms** |
-| **Frame Throughput** | Pure computational throughput (excluding 30 FPS camera shutter) | **~32.4 FPS** | **~39.8 FPS** |
+| **Total Computation** | **End-to-end algorithmic frame processing** | **~30.2 ms** | **~25.3 ms** |
+| **Frame Throughput** | Pure computational throughput (excluding 30 FPS camera shutter) | **~33.1 FPS** | **~39.5 FPS** |
 
 ---
 

@@ -48,8 +48,8 @@ def test_db(tmp_path):
         yield session
 
 
-def test_export_predictions(test_db):
-    out = export_predictions(test_db)
+def test_export_predictions(test_db, tmp_path):
+    out = export_predictions(test_db, out_path=tmp_path / "test_predictions.csv")
     assert out.exists(), "predictions CSV does not exist"
     df = pd.read_csv(out)
     assert len(df) == 1
@@ -60,8 +60,8 @@ def test_export_predictions(test_db):
     assert df.iloc[0]["pad_status"] == "PAD_UNAVAILABLE"
 
 
-def test_export_summary(test_db):
-    out = export_summary(test_db)
+def test_export_summary(test_db, tmp_path):
+    out = export_summary(test_db, out_path=tmp_path / "test_summary.csv")
     assert out.exists(), "summary CSV does not exist"
     df = pd.read_csv(out)
     assert len(df) == 1
@@ -69,15 +69,15 @@ def test_export_summary(test_db):
     assert df.iloc[0]["present_accepted"] == 1
 
 
-def test_export_manifest_and_environment():
+def test_export_manifest_and_environment(tmp_path):
     det_status = {"model": "MediaPipe BlazeFace", "status": "loaded"}
     rec_status = {"model": "EdgeFace XS", "status": "loaded"}
-    p_env = export_environment(rec_status, det_status)
+    p_env = export_environment(rec_status, det_status, out_path=tmp_path / "env.txt")
     assert p_env.exists()
     content = p_env.read_text(encoding="utf-8")
     assert "Python" in content or "python" in content
 
-    p_man = export_model_manifest(rec_status, det_status)
+    p_man = export_model_manifest(rec_status, det_status, out_path=tmp_path / "manifest.json")
     assert p_man.exists()
     data = json.loads(p_man.read_text(encoding="utf-8"))
     assert data["pad"]["ui_label"] == "PAD_UNAVAILABLE"

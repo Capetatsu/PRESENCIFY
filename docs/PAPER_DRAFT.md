@@ -9,7 +9,7 @@
 
 ## Abstract
 
-Automating classroom attendance using computer vision offers substantial operational efficiency but introduces severe vulnerabilities on edge hardware: high false-rejection rates under unconstrained indoor lighting and pose variations, proxy attendance from unverified matches, and excessive computational demands that overwhelm commodity classroom laptops. In this paper, we present **SmartAttend**, a privacy-conscious, local-first research prototype designed specifically for commodity x86 laptop hardware lacking dedicated graphics processing units (GPUs). SmartAttend couples a lightweight edge face detector (MediaPipe BlazeFace, executing in 3.5 ms) with a compact hybrid CNN-Transformer recognition backbone (EdgeFace XS, executing in 26.6 ms on an Intel i3 CPU). Rather than enforcing brittle hard-threshold decision boundaries, SmartAttend implements a dual-threshold confidence-based review policy that automatically accepts high-confidence identities ($\ge 0.65$), rejects low-similarity strangers ($< 0.52$), and routes ambiguous matches ($0.52 \le \text{similarity} < 0.65$) to an audited teacher review queue. Evaluated on a controlled open-set protocol across 41 subjects (410 probe captures) with strictly separated gallery, validation, and held-out test splits, our confidence review policy rescues genuine students from false absence, cutting false rejections from 36.0% down to 15.0%, increasing identity-specific identification recall from 64.0% to 78.0%, and elevating identity F1-score from 0.677 to 0.769 (binary attendance F1-score from 0.751 to 0.837) compared with a standard recognition-only baseline, requiring human intervention on 34.9% of borderline cases. We provide full hardware latency logs, an empirical audit of recent 2024–2026 biometric literature, and an honest disclosure of presentation-attack detection unavailability.
+Automating classroom attendance using computer vision offers substantial operational efficiency but introduces severe vulnerabilities on edge hardware: high false-rejection rates under unconstrained indoor lighting and pose variations, proxy attendance from unverified matches, and excessive computational demands that overwhelm commodity classroom laptops. In this paper, we present **SmartAttend**, a privacy-conscious, local-first research prototype designed specifically for commodity x86 laptop hardware lacking dedicated graphics processing units (GPUs). SmartAttend couples a lightweight edge face detector (MediaPipe BlazeFace, executing in 3.5 ms) with a compact hybrid CNN-Transformer recognition backbone (EdgeFace XS, forward pass executing in 15.3 ms on an Intel i3 CPU). Rather than enforcing brittle hard-threshold decision boundaries, SmartAttend implements a dual-threshold confidence-based review policy that automatically accepts high-confidence identities ($\ge 0.65$), rejects low-similarity strangers ($< 0.52$), and routes ambiguous matches ($0.52 \le \text{similarity} < 0.65$) to an audited teacher review queue. Evaluated on a controlled open-set protocol across 41 subjects (410 probe captures) with strictly separated gallery, validation, and held-out test splits, our confidence review policy rescues genuine students from false absence, cutting false rejections from 35.0% down to 16.0%, increasing identity-specific identification recall from 65.0% to 77.0%, and elevating identity F1-score from 0.684 to 0.762 (binary attendance F1-score from 0.758 to 0.832) compared with a standard recognition-only baseline, requiring human intervention on 33.7% of borderline cases (56/166). We provide full hardware latency logs, an empirical audit of recent 2024–2026 biometric literature, and an honest disclosure of presentation-attack detection unavailability.
 
 **Keywords:** Facial Biometrics, Classroom Attendance, Edge AI, CPU Inference, Confidence-Based Human Review, Presentation Attack Detection.
 
@@ -141,28 +141,28 @@ To eliminate any ambiguity, we report results under two explicitly defined evalu
 
 | Metric | Method A: Recognition-Only ($\tau = 0.65$) | Method B: Stage 1 (Automated) | Method B: Stage 2 (Post-Review) | Impact of SmartAttend Policy |
 |---|---|---|---|---|
-| **True Accepts (Identity Match)** | 64 / 100 (64.0%) | 64 / 100 (64.0%) | **78 / 100 (78.0%)** | **+14 genuine students rescued** |
+| **True Accepts (Identity Match)** | 65 / 100 (65.0%) | 65 / 100 (65.0%) | **77 / 100 (77.0%)** | **+12 genuine students rescued** |
 | **Misidentifications (Wrong ID)** | 7 / 100 (7.0%) | 7 / 100 (7.0%) | 7 / 100 (7.0%) | Isolated in high-confidence tail |
-| **False Rejections (Absences)** | 29 / 100 (29.0%) | 4 / 100 (4.0% auto) | **15 / 100 (15.0%)** | **Cut from 36.0% down to 15.0%** |
+| **False Rejections (Absences)** | 28 / 100 (28.0%) | 5 / 100 (5.0% auto) | **16 / 100 (16.0%)** | **Cut from 35.0% down to 16.0%** |
 | **Impostors Routed to Review** | 0 (0.0%) | **33 / 66 (50.0%)** | 0 (Audited) | **33 impostors stopped from auto-login** |
-| **Impostor False Accepts** | 18 / 66 (27.3%) | 18 / 66 (27.3%) | 18 / 66 (27.3%) | High-similarity tail |
+| **Impostor False Accepts** | 18 / 66 (27.3%) | 18 / 66 (27.3%) | 18 / 66 (27.3%) | High-similarity tail ($\ge 0.65$) |
 | **Impostor True Rejects** | 48 / 66 (72.7%) | 15 / 66 (22.7% auto) | **48 / 66 (72.7%)** | Maintained strong stranger rejection |
-| **Review Queue Workload** | 0 / 166 (0.0%) | **58 / 166 (34.94%)** | 58 audited | Quantified human workload |
-| **Identity-Specific Precision** | 0.7191 (64/89) | — | **0.7573 (78/103)** | **+3.82%** |
-| **Identity-Specific Recall** | 0.6400 (64/100) | — | **0.7800 (78/100)** | **+14.00%** |
-| **Identity-Specific F1-Score** | 0.6772 | — | **0.7685** | **+9.13%** |
-| **Binary Attendance Precision** | 0.7978 (71/89) | — | **0.8252 (85/103)** | **+2.74%** |
-| **Binary Attendance Recall** | 0.7100 (71/100) | — | **0.8500 (85/100)** | **+14.00%** |
-| **Binary Attendance F1-Score** | 0.7513 | — | **0.8374** | **+8.61%** |
-| **Overall Accuracy** | 67.47% | — | **75.90%** | **+8.43%** |
+| **Review Queue Workload** | 0 / 166 (0.0%) | **56 / 166 (33.73%)** | 56 audited | Quantified human workload |
+| **Identity-Specific Precision** | 0.7222 (65/90) | — | **0.7549 (77/102)** | **+3.27%** |
+| **Identity-Specific Recall** | 0.6500 (65/100) | — | **0.7700 (77/100)** | **+12.00%** |
+| **Identity-Specific F1-Score** | 0.6842 | — | **0.7624** | **+7.82%** |
+| **Binary Attendance Precision** | 0.8000 (72/90) | — | **0.8235 (84/102)** | **+2.35%** |
+| **Binary Attendance Recall** | 0.7200 (72/100) | — | **0.8400 (84/100)** | **+12.00%** |
+| **Binary Attendance F1-Score** | 0.7579 | — | **0.8317** | **+7.38%** |
+| **Overall Accuracy** | 68.07% | — | **75.30%** | **+7.23%** |
 
 ### 5.4 Hardware Inference Latency Breakdown
 Timing records distinguish feature extraction inference from complete pipeline latency on an Intel i3 CPU (6 execution threads, PyTorch CPU):
-- **Feature Extraction (EdgeFace XS forward pass):** 26.59 ms mean, 21.19 ms median, 19.08 ms std dev, min 9.51 ms, max 80.29 ms.
+- **Feature Extraction (EdgeFace XS forward pass):** 15.30 ms mean, 15.75 ms median, 2.86 ms std dev, min 8.60 ms, max 24.74 ms.
 - **Face Detection (MediaPipe BlazeFace):** 3.5 ms mean.
 - **Affine Alignment & Preprocessing:** 0.8 ms mean.
 - **Cosine Distance Gallery Search (20 subjects):** <0.05 ms.
-- **Total Computational Frame Latency:** **~30.9 ms per face**, achieving **~32 FPS** computational throughput on commodity laptop CPUs.
+- **Total Computational Frame Latency:** **~19.6 ms per face**, achieving **~51.0 FPS** computational throughput on commodity laptop CPUs.
 
 ---
 
@@ -170,10 +170,10 @@ Timing records distinguish feature extraction inference from complete pipeline l
 
 ### 6.1 Impact of the Confidence Review Policy
 The empirical findings substantiate Hypothesis $H_1$:
-1. In the recognition-only baseline, enforcing a rigorous $\tau_{\text{accept}} = 0.65$ cutoff causes severe false rejection: **29% of genuine students are rejected as UNKNOWN**, and an additional 7% are misidentified, totaling **36.0% False Rejection Rate (FRR)**. When students present under natural pose or lighting changes, their cosine similarity frequently drops into the 0.52–0.64 interval.
-2. In SmartAttend, routing the $[0.52, 0.65)$ interval to `REVIEW_REQUIRED` captures **25 genuine student probes** and **33 impostor probes**.
+1. In the recognition-only baseline, enforcing a rigorous $\tau_{\text{accept}} = 0.65$ cutoff causes severe false rejection: **28% of genuine students are rejected as UNKNOWN**, and an additional 7% are misidentified, totaling **35.0% False Rejection Rate (FRR)**. When students present under natural pose or lighting changes, their cosine similarity frequently drops into the 0.52–0.64 interval.
+2. In SmartAttend, routing the $[0.52, 0.65)$ interval to `REVIEW_REQUIRED` captures **23 genuine student probes** and **33 impostor probes** (total 56 probes in review queue).
 3. **Clarifying Impostor Mitigation:** While 18 impostors with extreme similarity ($\ge 0.65$) were auto-accepted in Stage 1, the confidence review policy successfully intercepted **33 borderline impostors** that scored in $[0.52, 0.65)$. Under a single lower threshold (such as $\tau = 0.52$), all $18 + 33 = 51$ impostors would have achieved proxy attendance. SmartAttend prevented these 33 impostors from logging attendance.
-4. Following teacher resolution, 14 genuine students are verified, raising identity-specific recall from 64.0% to 78.0% and binary attendance recall from 71.0% to 85.0%. The operational tradeoff is a human review load of **34.94%** on ambiguous events.
+4. Following teacher resolution, 12 genuine students are verified, raising identity-specific recall from 65.0% to 77.0% and binary attendance recall from 72.0% to 84.0%. The operational tradeoff is a human review load of **33.73%** on ambiguous events.
 
 ### 6.2 Comparison with Prior Literature
 Compared with server-bound CCTV pipelines (Patel et al., 2025 [6]), SmartAttend trades continuous wide-angle tracking for local, near-field CPU efficiency. Where mobile research models like FaceLiVT (Setyawan et al., 2025 [1]) demonstrate impressive theoretical benchmark FLOPs on mobile NPU hardware, our audit shows that practical edge adoption is bottlenecked by open checkpoint distribution. EdgeFace XS (George et al., 2024 [2]) proved to be the only peer-reviewed 2024 lightweight model offering public, reproducible, and license-compatible weights for CPU execution.
@@ -190,7 +190,7 @@ Compared with server-bound CCTV pipelines (Patel et al., 2025 [6]), SmartAttend 
 
 ## 8. Conclusion
 
-SmartAttend demonstrates that practical, accurate, and ethical classroom attendance tracking can be achieved on entry-level CPU laptop hardware without GPU acceleration or cloud dependencies. By coupling MediaPipe BlazeFace with EdgeFace XS, the system executes in ~31 ms on an Intel i3 CPU. Our empirical findings demonstrate that replacing brittle hard-threshold cutoffs with a dual-threshold confidence review policy reduces false student rejections from 36.0% down to 15.0%, prevents 33 borderline impostors from logging proxy attendance, and improves identification F1-score from 0.677 to 0.769 (binary attendance F1-score from 0.751 to 0.837). Future work will integrate single-frame presentation-attack models once verified public checkpoints become available.
+SmartAttend demonstrates that practical, accurate, and ethical classroom attendance tracking can be achieved on entry-level CPU laptop hardware without GPU acceleration or cloud dependencies. By coupling MediaPipe BlazeFace with EdgeFace XS, the system executes in ~19.6 ms on an Intel i3 CPU (~51.0 FPS). Our empirical findings demonstrate that replacing brittle hard-threshold cutoffs with a dual-threshold confidence review policy reduces false student rejections from 35.0% down to 16.0%, prevents 33 borderline impostors from logging proxy attendance, and improves identification F1-score from 0.684 to 0.762 (binary attendance F1-score from 0.758 to 0.832). Future work will integrate single-frame presentation-attack models once verified public checkpoints become available.
 
 ---
 

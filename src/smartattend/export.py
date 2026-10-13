@@ -35,12 +35,15 @@ def _ensure_dir():
     EXPERIMENTS_DIR.mkdir(exist_ok=True)
 
 
-def export_predictions(db: DBSession, session_id: Optional[str] = None) -> Path:
+def export_predictions(
+    db: DBSession, session_id: Optional[str] = None, out_path: Optional[Path] = None
+) -> Path:
     """
     Export anonymized predictions CSV.
     Uses pseudonym instead of display_name or student UUID.
     """
-    _ensure_dir()
+    target = out_path or (EXPERIMENTS_DIR / "predictions_anonymized.csv")
+    target.parent.mkdir(parents=True, exist_ok=True)
     query = (
         db.query(AttendanceEvent, Student)
         .outerjoin(Student, AttendanceEvent.student_id == Student.id)
@@ -64,14 +67,14 @@ def export_predictions(db: DBSession, session_id: Optional[str] = None) -> Path:
         })
 
     df = pd.DataFrame(rows)
-    out = EXPERIMENTS_DIR / "predictions_anonymized.csv"
-    df.to_csv(out, index=False)
-    return out
+    df.to_csv(target, index=False)
+    return target
 
 
-def export_summary(db: DBSession) -> Path:
+def export_summary(db: DBSession, out_path: Optional[Path] = None) -> Path:
     """Export attendance summary per session."""
-    _ensure_dir()
+    target = out_path or (EXPERIMENTS_DIR / "attendance_summary.csv")
+    target.parent.mkdir(parents=True, exist_ok=True)
     sessions = db.query(AttendanceSession).all()
     rows = []
     for sess in sessions:
@@ -92,14 +95,16 @@ def export_summary(db: DBSession) -> Path:
             "total_events": len(events),
         })
     df = pd.DataFrame(rows)
-    out = EXPERIMENTS_DIR / "attendance_summary.csv"
-    df.to_csv(out, index=False)
-    return out
+    df.to_csv(target, index=False)
+    return target
 
 
-def export_environment(recognizer_status: dict, detector_status: dict) -> Path:
+def export_environment(
+    recognizer_status: dict, detector_status: dict, out_path: Optional[Path] = None
+) -> Path:
     """Capture exact environment for reproducibility."""
-    _ensure_dir()
+    target = out_path or (EXPERIMENTS_DIR / "environment.txt")
+    target.parent.mkdir(parents=True, exist_ok=True)
     lines = [
         f"timestamp: {datetime.now(timezone.utc).isoformat()}",
         f"platform: {platform.platform()}",
@@ -122,16 +127,16 @@ def export_environment(recognizer_status: dict, detector_status: dict) -> Path:
         "=== Recognizer ===",
         json.dumps(recognizer_status, indent=2),
     ]
-    out = EXPERIMENTS_DIR / "environment.txt"
-    out.write_text("\n".join(lines), encoding="utf-8")
-    return out
+    target.write_text("\n".join(lines), encoding="utf-8")
+    return target
 
 
 def export_model_manifest(
-    recognizer_status: dict, detector_status: dict
+    recognizer_status: dict, detector_status: dict, out_path: Optional[Path] = None
 ) -> Path:
     """Export model manifest JSON for paper reproducibility section."""
-    _ensure_dir()
+    target = out_path or (EXPERIMENTS_DIR / "model_manifest.json")
+    target.parent.mkdir(parents=True, exist_ok=True)
     manifest = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "detector": detector_status,
@@ -142,6 +147,5 @@ def export_model_manifest(
             "ui_label": "PAD_UNAVAILABLE",
         },
     }
-    out = EXPERIMENTS_DIR / "model_manifest.json"
-    out.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-    return out
+    target.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return target
