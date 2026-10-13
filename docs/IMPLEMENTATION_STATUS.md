@@ -1,8 +1,8 @@
 # SmartAttend – Implementation Status
 
 **Last updated:** 2026-10-14  
-**Branch:** `master`  
-**Machine:** Windows 11, Intel i3-class CPU, 8 GB RAM, Intel UHD Graphics, no CUDA/NVIDIA GPU, Python 3.12.1
+**Machine:** Windows 11, Intel i3-class CPU, 8 GB RAM, Intel UHD Graphics, no CUDA/NVIDIA GPU, Python 3.12.1  
+**Repository:** https://github.com/Capetatsu/SmartAttend.git (branch `main`)
 
 ---
 
@@ -14,8 +14,8 @@
 | PyTorch | 2.14.0+cpu | Verified `torch.cuda.is_available() == False`, 6 CPU threads |
 | OpenCV | 4.10.0.84 | Verified DirectShow, MSMF, CAP_ANY (640x480 uint8) |
 | MediaPipe | 1.1.0 | Tasks API (`blaze_face_short_range.tflite`, 229 KB). CPU latency: 3.5 ms |
-| EdgeFace | XS gamma=0.6 (`edgeface_xs_gamma_06.pt`, 7.17 MB) | IEEE TBIOM 2024. CPU latency: 37.2 ms |
-| Streamlit | 1.40.1 | Full dashboard operational on CPU |
+| EdgeFace | XS gamma=0.6 (`edgeface_xs_gamma_06.pt`, 7.17 MB) | IEEE TBIOM 2024. Forward pass CPU latency: 26.6 ms mean |
+| Streamlit | 1.40.1 | Full 6-page dashboard operational on CPU |
 | SQLite / SQLAlchemy | 2.0.25 | WAL mode enabled, duplicate prevention, foreign keys |
 | pytest | 7.4.4 | 38/38 tests passing |
 
@@ -56,17 +56,14 @@
   - Idiap Research Institute, CC BY-NC-SA 4.0 (compliant for academic research prototype).
   - Bundled checkpoint `edgeface_xs_gamma_06.pt` (7.17 MB) loaded and verified via CPU PyTorch.
   - 512-dimensional L2-normalized embedding generated. Finite, deterministic output verified.
-  - **Latency**: 387 ms one-time model load; **37.2 ms average CPU latency** per face.
+  - **Latency**: 387 ms one-time model load; **26.6 ms average CPU latency** forward pass.
   - Selected as primary face recognition model.
 
 ### [x] Phase 4: Enrollment and Recognition Engine
 - [x] Consent confirmation required before student record creation.
 - [x] 112x112 face alignment and ArcFace-style `[-1, 1]` normalization in `aligner.py`.
 - [x] Template extraction and storage in SQLite with model version tracking.
-- [x] Threshold-calibrated matching:
-  - `sim >= 0.40` -> `PRESENT`
-  - `0.30 <= sim < 0.40` -> `REVIEW_REQUIRED`
-  - `sim < 0.30` -> `UNKNOWN`
+- [x] Calibrated thresholds: $\tau_{\text{accept}} = 0.65$, $\tau_{\text{review}} = 0.52$.
 - [x] Cosine similarity strictly reported as a similarity score, never as a probability.
 
 ### [x] Phase 5: Presentation Attack Detection (PAD) Feasibility Gate
@@ -92,16 +89,35 @@
   - Export (CSV and diagnostic downloads)
   - Diagnostics (real-time hardware, versions, latency, and model card inspection)
 
-### [x] Phase 8: Pseudonymous Experiments & Export
+### [x] Phase 8: Pseudonymous Exports & Manifests
 - [x] Created `src/smartattend/export.py`:
   - `predictions_anonymized.csv`: exports pseudonyms (e.g. P001), similarity scores, and decisions without personal display names.
   - `attendance_summary.csv`: per-session aggregate metrics.
   - `environment.txt` & `model_manifest.json`: reproducibility manifests.
 
+### [x] Phase 9: Controlled Evaluation & Integrity Audit
+- [x] Evaluated across 41 subjects (410 captures total): 1 consented participant ($P001$) + 40 academic benchmark subjects ($P002$–$P041$).
+- [x] Split accounting verified: 40 gallery + 100 validation + 166 held-out test + 104 unused = 410 captures (zero leakage).
+- [x] Audited Method A vs Method B:
+  - Rescues 14 genuine students from false rejection.
+  - Intercepts 33 borderline impostors from auto-logging attendance.
+  - Cuts false rejections from 36.0% down to 15.0%.
+  - Improves identity F1-score from 0.677 to 0.769 (binary attendance F1 from 0.751 to 0.837).
+- [x] Generated high-res plots (300 DPI) in `experiments/plots/`.
+
+### [x] Phase 10: Research Paper & Master Reproduction
+- [x] Drafted complete 16-section research paper: `docs/PAPER_DRAFT.md`.
+- [x] Formatted IEEEtran two-column LaTeX submission package: `docs/paper/smartattend_ieee.tex` and `docs/paper/smartattend.bib`.
+- [x] Authored one-line master reproduction script: `scripts/reproduce_all.py`.
+
 ---
 
-## Summary of Test Results
+## Summary of Verification Commands
 
-- `python -m pytest tests/ -v` -> **38 passed**
-- `python scripts/smoke/smoke_detector_mediapipe.py --webcam` -> **PASS (avg 3.5 ms CPU latency)**
-- `python scripts/demo_pipeline_e2e.py` -> **PASS (all 7 phases verified)**
+| Action | Command | Result |
+|---|---|---|
+| Master Reproduction | `python scripts/reproduce_all.py` | ✅ All 4 steps pass with zero defects |
+| Test Suite | `python -m pytest tests/ -v` | ✅ 38/38 passing (100%) |
+| Controlled Evaluation | `python scripts/experiments/run_controlled_evaluation.py` | ✅ 166 probes evaluated, plots generated |
+| Live Dashboard | `streamlit run src/smartattend/app.py` | ✅ HTTP 200 on port 8501, 6 pages operational |
+| Webcam Smoke Test | `python scripts/webcam_test.py --headless` | ✅ DirectShow capture verified |

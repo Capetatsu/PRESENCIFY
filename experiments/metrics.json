@@ -1,72 +1,84 @@
 {
   "metadata": {
-    "timestamp": "2026-10-13T19:28:47Z",
+    "timestamp": "2026-10-13T19:45:23Z",
     "evaluation_protocol": "Open-set identification with separate Gallery, Validation, and Held-out Test sets",
     "enrolled_subjects_count": 20,
     "unenrolled_subjects_count": 11,
     "total_test_probes": 166,
     "threshold_accept": 0.65,
     "threshold_review": 0.52,
-    "hardware": "Intel i3-class CPU (6 threads), 8 GB RAM, Windows 11, PyTorch CPU"
+    "hardware": "Intel i3-class CPU (6 threads), 8 GB RAM, Windows 11, PyTorch CPU",
+    "dataset_summary": {
+      "total_captures": 410,
+      "enrolled_gallery_captures": 40,
+      "validation_probes": 100,
+      "test_probes": 166,
+      "unused_captures": 104
+    },
+    "security_audit": {
+      "pad_status": "PAD_UNAVAILABLE",
+      "live_consented_subjects": 1,
+      "academic_benchmark_subjects": 40
+    }
   },
   "method_A_recognition_only": {
-    "true_accepts_identity": 64,
-    "misidentifications": 7,
-    "true_accepts_binary": 71,
-    "false_rejects": 29,
+    "true_accepts_identity": 61,
+    "misidentifications": 8,
+    "true_accepts_binary": 69,
+    "false_rejects": 31,
     "true_rejects": 48,
     "false_accepts": 18,
-    "precision_identity": 0.7191,
-    "recall_identity": 0.64,
-    "f1_identity": 0.6772,
-    "precision_binary": 0.7978,
-    "recall_binary": 0.71,
-    "f1_binary": 0.7513,
-    "accuracy": 0.6747,
+    "precision_identity": 0.7011,
+    "recall_identity": 0.61,
+    "f1_identity": 0.6524,
+    "precision_binary": 0.7931,
+    "recall_binary": 0.69,
+    "f1_binary": 0.738,
+    "accuracy": 0.6566,
     "far_percent": 27.27,
-    "frr_percent": 36.0
+    "frr_percent": 39.0
   },
   "method_B_confidence_review": {
     "stage1_automated": {
-      "auto_accepted_genuine_correct": 64,
-      "auto_accepted_genuine_misid": 7,
+      "auto_accepted_genuine_correct": 61,
+      "auto_accepted_genuine_misid": 8,
       "auto_accepted_impostor_fa": 18,
-      "review_queue_genuine": 25,
+      "review_queue_genuine": 27,
       "review_queue_impostor": 33,
-      "review_queue_total": 58,
-      "review_rate_percent": 34.94,
+      "review_queue_total": 60,
+      "review_rate_percent": 36.14,
       "auto_rejected_genuine": 4,
       "auto_rejected_impostor": 15
     },
     "stage2_post_review": {
-      "rescued_genuine_into_present": 14,
+      "rescued_genuine_into_present": 12,
       "blocked_impostor_into_rejected": 33,
-      "final_true_accepts_identity": 78,
-      "final_misidentifications": 7,
-      "final_true_accepts_binary": 85,
-      "final_false_rejects": 15,
+      "final_true_accepts_identity": 73,
+      "final_misidentifications": 8,
+      "final_true_accepts_binary": 81,
+      "final_false_rejects": 19,
       "final_true_rejects": 48,
       "final_false_accepts": 18,
-      "precision_identity": 0.7573,
-      "recall_identity": 0.78,
-      "f1_identity": 0.7685,
-      "precision_binary": 0.8252,
-      "recall_binary": 0.85,
-      "f1_binary": 0.8374,
-      "accuracy": 0.759,
+      "precision_identity": 0.7374,
+      "recall_identity": 0.73,
+      "f1_identity": 0.7337,
+      "precision_binary": 0.8182,
+      "recall_binary": 0.81,
+      "f1_binary": 0.8141,
+      "accuracy": 0.7289,
       "far_percent": 27.27,
-      "frr_percent": 15.0
+      "frr_percent": 19.0
     }
   },
   "latency_ms": {
-    "embedding_inference_mean": 26.59,
-    "embedding_inference_median": 21.19,
-    "embedding_inference_std": 19.08,
-    "embedding_inference_min": 12.97,
-    "embedding_inference_max": 197.13,
+    "embedding_inference_mean": 15.83,
+    "embedding_inference_median": 14.21,
+    "embedding_inference_std": 5.19,
+    "embedding_inference_min": 8.51,
+    "embedding_inference_max": 36.64,
     "detector_inference_mean": 3.5,
     "alignment_mean": 0.8,
-    "total_computational_latency_mean": 30.89,
-    "throughput_fps": 32.4
+    "total_computational_latency_mean": 20.13,
+    "throughput_fps": 49.7
   }
 }
