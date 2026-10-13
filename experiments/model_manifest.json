@@ -1,0 +1,34 @@
+{
+  "exported_at": "2026-10-13T19:02:24.751822+00:00",
+  "detector": {
+    "model": "MediaPipe BlazeFace short-range (Tasks API)",
+    "source": "mediapipe==1.1.0 / Apache 2.0",
+    "model_path": "D:\\Things\\Work\\Projects\\MiniProject\\smartattend\\models\\blaze_face_short_range.tflite",
+    "loaded": true,
+    "load_time_ms": 47.2,
+    "load_error": null,
+    "mediapipe_version": "1.1.0",
+    "min_confidence": 0.5
+  },
+  "recognizer": {
+    "model": "EdgeFace XS gamma=0.6",
+    "checkpoint": "edgeface_xs_gamma_06.pt (7.17 MB)",
+    "paper": "IEEE TBIOM 2024, DOI 10.1109/TBIOM.2024.3352164",
+    "license": "CC BY-NC-SA 4.0 \u2014 non-commercial research only",
+    "preprocessing": "BGR\u2192RGB, /127.5-1, 112\u00d7112 NCHW float32",
+    "checkpoint_path": "C:\\Users\\skuma\\.cache\\torch\\hub\\otroshi_edgeface_main\\checkpoints\\edgeface_xs_gamma_06.pt",
+    "checkpoint_exists": true,
+    "loaded": true,
+    "load_time_ms": 224.7,
+    "load_error": null,
+    "threshold_accept": 0.4,
+    "threshold_review": 0.3,
+    "verified_latency": "avg 37 ms / max 68 ms (Intel i3, CPU, 10 runs)",
+    "note": "Thresholds are defaults \u2014 calibrate on validation split before experiments."
+  },
+  "pad": {
+    "status": "NOT_IMPLEMENTED",
+    "reason": "KBS 2025 paper has no public code. CASO-PAD (Sci. Reports 2026) weights unverified.",
+    "ui_label": "PAD_UNAVAILABLE"
+  }
+}

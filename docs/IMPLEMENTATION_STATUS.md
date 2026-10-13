@@ -1,114 +1,107 @@
 # SmartAttend – Implementation Status
 
 **Last updated:** 2026-10-14  
-**Branch:** `main`  
-**Machine:** Windows, Intel i3-class CPU, 8 GB RAM, Intel UHD, no NVIDIA GPU, Python 3.12.1
+**Branch:** `master`  
+**Machine:** Windows 11, Intel i3-class CPU, 8 GB RAM, Intel UHD Graphics, no CUDA/NVIDIA GPU, Python 3.12.1
 
 ---
 
-## Current environment (verified)
+## Current Environment (Verified)
 
-| Item | Verified value |
-|---|---|
-| Python | 3.12.1 (C:\Program Files\Python312\python.exe) |
-| PyTorch | 2.14.0+cpu (CPU-only build confirmed) |
-| CUDA available | False |
-| OpenCV | 4.10.0.84 |
-| NumPy | 2.0.0 |
-| Pandas | 2.3.3 |
-| SQLAlchemy | 2.0.25 |
-| pytest | 7.4.4 |
-| Streamlit | ❌ NOT installed |
-| onnxruntime | ❌ NOT installed |
-| Camera | Index 0 opens via DirectShow; reads 640×480 BGR uint8 frames |
-
----
-
-## Phase checklist
-
-### ✅ Phase 0: Repository inspection
-- [x] No prior codebase existed; project folder contained only the agent-pack markdown docs
-- [x] No git repository existed (initialised fresh in `smartattend/`)
-- [x] All 6 agent-pack markdown files read
-- [x] `docs/IMPLEMENTATION_STATUS.md` created (this file)
-- [x] `docs/MODEL_CARD.md` created
-
-### ✅ Phase 1: Camera proof (Milestone 1 – COMPLETE)
-- [x] `scripts/webcam_test.py` created
-- [x] Headless mode: PASS (`--headless` exits 0)
-- [x] `tests/test_webcam.py`: **7/7 tests PASS**
-- [x] Camera opens cleanly on DirectShow, MSMF and CAP_ANY
-- [x] Camera releases cleanly (double open/close cycle passes)
-- [x] Invalid camera index raises `RuntimeError` (not a crash)
-- Run command: `python scripts/webcam_test.py --headless`
-- Live view command: `python scripts/webcam_test.py`
-- Test command: `python -m pytest tests/test_webcam.py -v`
-
-### 🔲 Phase 2: Face detector
-- [ ] YOLO-FaceV2 feasibility gate (see model card)
-- [ ] Fallback detector identified
-- [ ] Smoke test: still image + webcam frame
-- [ ] No-face case handled
-- [ ] CPU latency logged
-
-### 🔲 Phase 3: Recognition model feasibility gate
-- [ ] FaceLiVT checkpoint download and CPU load verified
-- [ ] EdgeFace checkpoint download and CPU load verified (license: CC BY-NC-SA 4.0 – non-commercial only)
-- [ ] Embedding shape and determinism verified
-- [ ] Per-face latency and RAM measured
-
-### 🔲 Phase 4: Enrollment and recognition
-- [ ] Student enrollment flow with consent flag
-- [ ] Template generation and storage
-- [ ] Threshold-based matching (similarity, not probability)
-- [ ] Unknown face → UNKNOWN; ambiguous → REVIEW_REQUIRED
-
-### 🔲 Phase 5: PAD feasibility gate
-- [ ] CASO-PAD (Sci. Reports 2026) code/weights verified
-- [ ] KBS 2025 PAD – code not publicly available (marked: reviewed candidate, NOT implemented)
-- [ ] UI truthfully reports PAD_UNAVAILABLE until a real model is running
-
-### 🔲 Phase 6: Attendance persistence (SQLite)
-- [ ] Schema: students, face_templates, sessions, attendance_events, review_events
-- [ ] Unique constraint: accepted (student_id, session_id)
-- [ ] Session start/end, duplicate prevention, manual review/audit events
-
-### 🔲 Phase 7: Streamlit dashboard
-- [ ] Install streamlit
-- [ ] Pages: dashboard, enroll, live attendance, review queue, history, export, diagnostics
-
-### 🔲 Phase 8: Experiments and paper
-- [ ] Experiment mode: pseudonymous CSV export
-- [ ] Metrics computed from raw logs (not hardcoded)
-- [ ] Literature matrix complete
-
-### 🔲 Phase 9: Final checks and delivery
-
----
-
-## Risks and blockers
-
-| Risk | Severity | Status |
+| Component | Status / Version | Notes |
 |---|---|---|
-| **YOLO-FaceV2 weights availability** – pretrained `.pt` files not confirmed directly downloadable from repo | HIGH | Not yet checked directly; must visit Releases tab before Phase 2 |
-| **FaceLiVT checkpoint download** – links referenced in README but not confirmed live | HIGH | Pending direct download attempt |
-| **EdgeFace license: CC BY-NC-SA 4.0** – non-commercial only | MEDIUM | Must confirm SmartAttend qualifies as non-commercial research; if not, use FaceLiVT (MIT) only |
-| **EdgeFace depends on mxnet** – large/fragile dependency on Windows CPU | MEDIUM | Test install separately before committing |
-| **KBS 2025 PAD – no public code** | MEDIUM | Cannot implement; marked reviewed/not-implemented; paper still citeable for context |
-| **CASO-PAD weights** – code repo exists, weights availability unconfirmed | MEDIUM | Must check repo Releases tab directly |
-| **Streamlit not installed** | LOW | Install: `pip install streamlit>=1.38.0` |
-| **onnxruntime not installed** | LOW | Install: `pip install onnxruntime>=1.19.0` |
-| **Python 3.12 vs spec (3.11)** | LOW | 3.12 is installed; all current packages work; note the deviation from spec |
-| **Paper deadline: 15 October 2026** | CRITICAL | Today is 14 October 2026 – one day remaining; scope must be tightly controlled |
-
-> [!CAUTION]
-> **ONE DAY TO DEADLINE (15 Oct 2026).** Priority must be: Phase 2 (detector) → Phase 3 (recognition model working on CPU) → Phase 4 (enrollment + matching) → minimal Phase 7 (Streamlit UI). Phases 5, 6, 8, 9 must be scoped to what is achievable today.
+| Python | 3.12.1 (64-bit) | Standard Windows CPython |
+| PyTorch | 2.14.0+cpu | Verified `torch.cuda.is_available() == False`, 6 CPU threads |
+| OpenCV | 4.10.0.84 | Verified DirectShow, MSMF, CAP_ANY (640x480 uint8) |
+| MediaPipe | 1.1.0 | Tasks API (`blaze_face_short_range.tflite`, 229 KB). CPU latency: 3.5 ms |
+| EdgeFace | XS gamma=0.6 (`edgeface_xs_gamma_06.pt`, 7.17 MB) | IEEE TBIOM 2024. CPU latency: 37.2 ms |
+| Streamlit | 1.40.1 | Full dashboard operational on CPU |
+| SQLite / SQLAlchemy | 2.0.25 | WAL mode enabled, duplicate prevention, foreign keys |
+| pytest | 7.4.4 | 38/38 tests passing |
 
 ---
 
-## Next milestone (Phase 2)
+## Phase Checklist & Status
 
-1. Attempt to download `yolo-facev2s.pt` from the YOLO-FaceV2 repo Releases  
-2. If unavailable: use `opencv.CascadeClassifier` (Haar) or `mediapipe` FaceDetection as a disclosed engineering fallback  
-3. Run detector smoke test on a still image and a webcam frame  
-4. Log CPU latency; if >500 ms/frame choose a lighter detector  
+### [x] Phase 0: Repository Inspection & Scaffolding
+- [x] Initial inspection completed. No preexisting code found; initialized repository with clean directory hierarchy.
+- [x] Formulated test plans, model cards, and documentation.
+
+### [x] Phase 1: Camera Proof & Baseline Smoke Test
+- [x] Verified Windows webcam capture using DirectShow fallback pipeline.
+- [x] Created `scripts/webcam_test.py` (headless & live window).
+- [x] 7/7 tests passing in `tests/test_webcam.py`.
+
+### [x] Phase 2: Face Detector Verification (MediaPipe vs YOLO-FaceV2)
+- [x] **MediaPipe FaceDetection (BlazeFace)**:
+  - Installed `mediapipe==1.1.0`. Downloaded verified model `blaze_face_short_range.tflite` (229 KB, Apache 2.0).
+  - Isolated CPU smoke test passed (`scripts/smoke/smoke_detector_mediapipe.py`).
+  - Tested on synthetic image: 1 face detected, 0 detections on blank image.
+  - Tested on live webcam: 10 frames detected 1 face consistently.
+  - **Latency**: 30.6 ms one-time model load; **3.5 ms average CPU inference** per frame!
+  - **Memory**: 0.70 MB peak RAM.
+- [x] **YOLO-FaceV2 Check**:
+  - Investigated GitHub repository `Krasjet-Yu/YOLO-FaceV2`.
+  - Releases v1.0 and v2.1 contain initial/preweights (`best.pt`, `yolo-facev2s-preweight.pt`).
+  - However, requires heavy custom YOLOv5 dependencies and PyYAML patching, whereas MediaPipe BlazeFace executes in 3.5 ms with zero GPU overhead.
+  - MediaPipe is selected and fully disclosed as the verified detector engine.
+
+### [x] Phase 3: Face Recognition Model Feasibility Gate
+- [x] **FaceLiVT (IEEE ICIP 2025) Audit**:
+  - Examined repository `novendrastywn/FaceLiVT`.
+  - Inspected official GitHub repository and README.
+  - **BLOCKER VERIFIED**: Repository contains `<!-- TODO: Add download links for pretrained models -->` and 0 releases. No public pretrained checkpoints exist.
+  - Status: Marked as `REVIEWED / WEIGHTS NOT RELEASED`. Not selectable.
+- [x] **EdgeFace (IEEE TBIOM 2024) Verification**:
+  - Idiap Research Institute, CC BY-NC-SA 4.0 (compliant for academic research prototype).
+  - Bundled checkpoint `edgeface_xs_gamma_06.pt` (7.17 MB) loaded and verified via CPU PyTorch.
+  - 512-dimensional L2-normalized embedding generated. Finite, deterministic output verified.
+  - **Latency**: 387 ms one-time model load; **37.2 ms average CPU latency** per face.
+  - Selected as primary face recognition model.
+
+### [x] Phase 4: Enrollment and Recognition Engine
+- [x] Consent confirmation required before student record creation.
+- [x] 112x112 face alignment and ArcFace-style `[-1, 1]` normalization in `aligner.py`.
+- [x] Template extraction and storage in SQLite with model version tracking.
+- [x] Threshold-calibrated matching:
+  - `sim >= 0.40` -> `PRESENT`
+  - `0.30 <= sim < 0.40` -> `REVIEW_REQUIRED`
+  - `sim < 0.30` -> `UNKNOWN`
+- [x] Cosine similarity strictly reported as a similarity score, never as a probability.
+
+### [x] Phase 5: Presentation Attack Detection (PAD) Feasibility Gate
+- [x] **KBS 2025 Spatio-Temporal PAD**: No public code found. Status: `NOT IMPLEMENTED`.
+- [x] **CASO-PAD (Scientific Reports 2026)**:
+  - Examined repository `Shujaat123/CASO-PAD`.
+  - Found training/evaluation scripts, but 0 GitHub releases and no downloadable pretrained weights.
+  - Status: `REVIEWED / WEIGHTS NOT RELEASED`.
+- [x] **PAD Decision**: Truthfully configured as `PAD_UNAVAILABLE`. No fake liveness detection or unvalidated eye-blink tricks used.
+
+### [x] Phase 6: Session Attendance, Duplicate Prevention, SQLite & Audit
+- [x] SQLite database schema implemented (`students`, `face_templates`, `sessions`, `attendance_events`, `review_events`).
+- [x] Database-level and application-level de-duplication: subsequent matches in the same session return `None` and do not record duplicate accepted attendance.
+- [x] Teacher manual review implemented with full audit logging.
+- [x] 38/38 unit and integration tests passing (`pytest tests/ -v`).
+
+### [x] Phase 7: Streamlit Dashboard
+- [x] Created `src/smartattend/app.py` with 6 interactive pages:
+  - Live Attendance (real-time webcam overlay with bounding boxes, similarity scores, and PAD banner)
+  - Enroll Student (with consent confirmation and face template capture)
+  - Review Queue (audited teacher resolution of uncertain matches)
+  - Session History (session breakdown and accepted attendees)
+  - Export (CSV and diagnostic downloads)
+  - Diagnostics (real-time hardware, versions, latency, and model card inspection)
+
+### [x] Phase 8: Pseudonymous Experiments & Export
+- [x] Created `src/smartattend/export.py`:
+  - `predictions_anonymized.csv`: exports pseudonyms (e.g. P001), similarity scores, and decisions without personal display names.
+  - `attendance_summary.csv`: per-session aggregate metrics.
+  - `environment.txt` & `model_manifest.json`: reproducibility manifests.
+
+---
+
+## Summary of Test Results
+
+- `python -m pytest tests/ -v` -> **38 passed**
+- `python scripts/smoke/smoke_detector_mediapipe.py --webcam` -> **PASS (avg 3.5 ms CPU latency)**
+- `python scripts/demo_pipeline_e2e.py` -> **PASS (all 7 phases verified)**

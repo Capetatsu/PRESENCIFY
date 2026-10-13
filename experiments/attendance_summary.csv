@@ -1,0 +1,2 @@
+session_id,session_name,started_at,ended_at,present_accepted,review_required,unknown,rejected,total_events
+b5082a16-ffa6-426a-8591-7189dab2611c,E2E Demo Class 101,2026-10-13T19:02:22.275624,2026-10-13T19:02:22.312917,1,1,1,0,3
