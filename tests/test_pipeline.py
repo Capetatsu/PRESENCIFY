@@ -369,3 +369,150 @@ class TestDatabase:
         assert evt is not None
         assert evt.student_id is None, "UNKNOWN must not be assigned to a student"
         assert evt.is_accepted is False
+
+
+# ── Bug Fixes & Regression Suite ─────────────────────────────────────────────
+
+class TestBugFixesRegression:
+
+    def test_format_similarity_safely_handles_all_numeric_and_null_inputs(self):
+        """Bug 1: Verify safe formatting without crashing on None, NaN, 0.0, or invalid types."""
+        from smartattend.camera import format_similarity
+        import numpy as np
+
+        assert format_similarity(None) == "N/A"
+        assert format_similarity(None, default="—") == "—"
+        assert format_similarity(0.0) == "0.000"
+        assert format_similarity(0.65432, decimals=3) == "0.654"
+        assert format_similarity(0.65432, decimals=2) == "0.65"
+        assert format_similarity(-0.12, decimals=2) == "-0.12"
+        assert format_similarity(float("nan")) == "N/A"
+        assert format_similarity(float("inf")) == "N/A"
+        assert format_similarity("invalid") == "N/A"
+
+    def test_review_queue_rendering_simulation_with_none_similarity(self, db):
+        """Bug 1: Verify Review Queue formatting logic renders None similarity without crashing."""
+        from smartattend.camera import format_similarity
+        from smartattend.database import AttendanceEvent
+        import numpy as np
+
+        sess = create_session(db, "Test Queue None Sim")
+        # Direct DB insert mimicking historic records with None similarity
+        event = AttendanceEvent(
+            session_id=sess.id,
+            student_id=None,
+            status="UNKNOWN",
+            similarity_score=None,
+            similarity_threshold=0.65,
+            pad_status="PAD_UNAVAILABLE",
+            is_accepted=False,
+        )
+        db.add(event)
+        db.commit()
+        db.refresh(event)
+
+        # Test formatting as executed in app.py Review Queue
+        sim_display = format_similarity(event.similarity_score, 3, "N/A")
+        expander_title = f"[{event.status}] Event #{event.id} — UNKNOWN — sim={sim_display}"
+        assert "sim=N/A" in expander_title
+
+        sim_val = (
+            round(float(event.similarity_score), 4)
+            if (event.similarity_score is not None and not np.isnan(float(event.similarity_score)))
+            else None
+        )
+        assert sim_val is None
+
+    def test_record_attendance_deduplicates_unknown_with_cooldown(self, db):
+        """Bug 3: Verify UNKNOWN events are rate-limited so they don't spam duplicate records."""
+        sess = create_session(db, "Test Unknown Cooldown")
+        from smartattend.recognizer import MatchResult, MatchStatus
+
+        match = MatchResult(
+            status=MatchStatus.UNKNOWN,
+            student_id=None,
+            student_name=None,
+            similarity=0.35,
+            threshold_accept=0.65,
+            threshold_review=0.52,
+            latency_ms=10.0,
+        )
+
+        # First UNKNOWN record: should be stored
+        evt1 = record_attendance(db, sess.id, match, frame_index=0, cooldown_seconds=30)
+        assert evt1 is not None
+        assert evt1.status == "UNKNOWN"
+
+        # Immediate second UNKNOWN record within cooldown: must be blocked (return None)
+        evt2 = record_attendance(db, sess.id, match, frame_index=10, cooldown_seconds=30)
+        assert evt2 is None, "Immediate duplicate UNKNOWN event must be suppressed by cooldown"
+
+        # Call with cooldown_seconds=0: should allow persistence
+        evt3 = record_attendance(db, sess.id, match, frame_index=20, cooldown_seconds=0)
+        assert evt3 is not None, "When cooldown_seconds=0, UNKNOWN event should be persisted"
+
+    def test_record_attendance_deduplicates_review_required(self, db):
+        """Bug 3: Verify REVIEW_REQUIRED items are deduplicated per student per session."""
+        student = enroll_student(db, "Grace Hopper", "P007", consent=True)
+        sess = create_session(db, "Test Review Dedup")
+        from smartattend.recognizer import MatchResult, MatchStatus
+
+        match = MatchResult(
+            status=MatchStatus.REVIEW_REQUIRED,
+            student_id=student.id,
+            student_name=student.display_name,
+            similarity=0.58,
+            threshold_accept=0.65,
+            threshold_review=0.52,
+            latency_ms=12.0,
+        )
+
+        # First ambiguous match: should be stored in review queue
+        evt1 = record_attendance(db, sess.id, match, frame_index=0)
+        assert evt1 is not None
+        assert evt1.status == "REVIEW_REQUIRED"
+
+        # Second ambiguous match for same student in same session: must be blocked
+        evt2 = record_attendance(db, sess.id, match, frame_index=10)
+        assert evt2 is None, "Duplicate REVIEW_REQUIRED for same student in session must be blocked"
+
+    def test_camera_diagnose_structure(self):
+        """Bug 2: Verify camera diagnostic routine returns expected schema and keys."""
+        from smartattend.camera import diagnose_camera
+        diag = diagnose_camera(0)
+        assert "device_index" in diag
+        assert "is_accessible" in diag
+        assert "backends" in diag
+        assert "hints" in diag
+        assert "DirectShow" in diag["backends"]
+        assert "MSMF" in diag["backends"]
+
+    def test_camera_open_invalid_index_returns_none_safely(self):
+        """Bug 2: Verify camera opener handles nonexistent camera index gracefully without raising."""
+        from smartattend.camera import open_camera
+        cap, backend, err = open_camera(index=99)
+        assert cap is None
+        assert backend == ""
+        assert err is not None
+        assert "99" in err
+
+    def test_review_queue_renders_actual_historical_db_records(self):
+        """Bug 1 & 3: Query real smartattend.db (which contains historic UNKNOWN records) and verify safe formatting."""
+        from smartattend.camera import format_similarity
+        from smartattend.database import get_session_factory, AttendanceEvent
+        from pathlib import Path
+        import sqlite3
+
+        db_path = Path(__file__).parents[1] / "smartattend.db"
+        if not db_path.exists():
+            return  # skip if running in environment without local db
+
+        factory = get_session_factory(str(db_path))
+        with factory() as db:
+            events = db.query(AttendanceEvent).all()
+            for evt in events:
+                # This must never raise TypeError: unsupported format string
+                s = format_similarity(evt.similarity_score, 3, "N/A")
+                title = f"[{evt.status}] Event #{evt.id} — sim={s}"
+                assert isinstance(title, str)
+

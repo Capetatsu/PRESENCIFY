@@ -29,26 +29,51 @@ def record_attendance(
     db: DBSession,
     session_id: str,
     match: MatchResult,
-    frame_index: int,
+    frame_index: Optional[int] = None,
     pad_status: str = PAD_UNAVAILABLE,
+    cooldown_seconds: Optional[int] = 30,
 ) -> Optional[AttendanceEvent]:
     """
-    Persist one attendance decision. Enforces duplicate prevention.
+    Persist one attendance decision. Enforces duplicate prevention and rate limiting.
 
-    Returns the AttendanceEvent row, or None if blocked by duplicate rule.
+    Returns the AttendanceEvent row, or None if blocked by duplicate/cooldown rules.
 
     Rules:
-      - PRESENT:  allowed only if no accepted record exists for student/session.
-      - REVIEW_REQUIRED: always stored for audit; not accepted.
-      - UNKNOWN:  stored for audit; no student link.
+      - PRESENT: allowed only if no accepted record exists for student/session.
+      - REVIEW_REQUIRED: allowed once per student per session to avoid review queue flooding.
+      - UNKNOWN: rate-limited by cooldown_seconds per session to avoid spamming failure logs.
       - MODEL_ERROR: stored for audit.
     """
     status = match.status.value
 
-    # Duplicate check (PRESENT only)
+    # 1. Duplicate check (PRESENT only once per student per session)
     if status == MatchStatus.PRESENT.value and match.student_id:
         if has_accepted_attendance(db, match.student_id, session_id):
             return None  # already marked present — do not create duplicate
+
+    # 2. De-duplication for REVIEW_REQUIRED (queue each student at most once per session)
+    if status == MatchStatus.REVIEW_REQUIRED.value and match.student_id:
+        existing_review = db.query(AttendanceEvent).filter_by(
+            session_id=session_id,
+            student_id=match.student_id,
+            status=MatchStatus.REVIEW_REQUIRED.value,
+        ).first()
+        if existing_review:
+            return None  # already queued for teacher review in this session
+
+    # 3. Rate-limiting for UNKNOWN events (avoid creating 60 records/min on continuous un-enrolled presence)
+    if status == MatchStatus.UNKNOWN.value and cooldown_seconds is not None and cooldown_seconds > 0:
+        recent_unknown = db.query(AttendanceEvent).filter_by(
+            session_id=session_id,
+            status=MatchStatus.UNKNOWN.value,
+        ).order_by(AttendanceEvent.recorded_at.desc()).first()
+        if recent_unknown and recent_unknown.recorded_at:
+            now_utc = datetime.now(timezone.utc)
+            rec = recent_unknown.recorded_at
+            if rec.tzinfo is None:
+                rec = rec.replace(tzinfo=timezone.utc)
+            if (now_utc - rec).total_seconds() < cooldown_seconds:
+                return None  # Cooldown active; suppress duplicate UNKNOWN spam
 
     is_accepted = (status == MatchStatus.PRESENT.value and
                    match.student_id is not None)

@@ -39,6 +39,9 @@ from smartattend.attendance import (
     record_attendance, store_template, teacher_review,
 )
 from smartattend.aligner import align_face_112
+from smartattend.camera import (
+    diagnose_camera, format_similarity, open_camera, read_frame_with_retry, release_camera,
+)
 from smartattend.database import (
     AttendanceEvent, AttendanceSession, ReviewEvent, Student,
     get_session_factory, init_db,
@@ -139,6 +142,22 @@ if page == "📷 Live Attendance":
                 st.rerun()
 
         st.markdown("---")
+        with st.expander("📷 Camera Settings & Diagnostics", expanded=False):
+            cam_idx = st.number_input("Camera index", min_value=0, max_value=5, value=0, step=1)
+            cam_backend_opt = st.selectbox(
+                "Preferred backend",
+                ["Auto (DirectShow -> MSMF -> ANY)", "DirectShow", "MSMF", "ANY"],
+            )
+            if st.button("🔍 Run Camera Diagnostic", key="btn_diag_cam"):
+                diag = diagnose_camera(int(cam_idx))
+                if diag["is_accessible"]:
+                    st.success(f"Camera index {cam_idx} accessible using '{diag['recommended_backend']}'.")
+                else:
+                    st.error(f"Camera index {cam_idx} could not be opened on any backend.")
+                st.json(diag)
+                for h in diag.get("hints", []):
+                    st.caption(f"• {h}")
+
         run_live = st.toggle("📹 Run webcam", value=False)
         frame_delay = st.slider("Frame skip (ms)", 50, 500, 100)
 
@@ -150,92 +169,129 @@ if page == "📷 Live Attendance":
         with get_db()() as db:
             enrolled = load_enrolled_embeddings(db, recognizer.MODEL_NAME)
 
-        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        frame_idx = 0
+        has_enrolled = len(enrolled) > 0
+        if not has_enrolled:
+            st.warning(
+                "⚠️ No students enrolled yet. Face recognition requires at least one enrolled student. "
+                "Go to '➕ Enroll Student' to add participants before taking attendance."
+            )
 
-        # Track already-accepted students to avoid re-querying DB every frame
-        already_present: set[str] = set()
-        with get_db()() as db:
-            accepted = db.query(AttendanceEvent).filter_by(
-                session_id=active_session_id, is_accepted=True, status="PRESENT"
-            ).all()
-            already_present = {e.student_id for e in accepted if e.student_id}
+        backend_pref = None if "Auto" in cam_backend_opt else (
+            "DirectShow" if "DirectShow" in cam_backend_opt else ("MSMF" if "MSMF" in cam_backend_opt else "ANY")
+        )
+        cap, actual_backend, open_err = open_camera(index=int(cam_idx), preferred_backend=backend_pref)
 
-        try:
-            while run_live:
-                ret, frame = cap.read()
-                if not ret:
-                    st.error("Camera read failed.")
-                    break
+        if cap is None:
+            st.error(f"❌ Camera initialization failed on device index {cam_idx}: {open_err}")
+            diag = diagnose_camera(int(cam_idx))
+            with st.expander("Camera Diagnostic Details & Troubleshooting", expanded=True):
+                st.json(diag)
+                for h in diag.get("hints", []):
+                    st.info(f"💡 {h}")
+        else:
+            frame_idx = 0
+            consecutive_read_failures = 0
+            MAX_CONSECUTIVE_FAILURES = 5
 
-                display = frame.copy()
-                detections = detector.detect(frame)
-                statuses = []
+            # Track already-accepted students to avoid re-querying DB every frame
+            already_present: set[str] = set()
+            with get_db()() as db:
+                accepted = db.query(AttendanceEvent).filter_by(
+                    session_id=active_session_id, is_accepted=True, status="PRESENT"
+                ).all()
+                already_present = {e.student_id for e in accepted if e.student_id}
 
-                for det in detections:
-                    x, y, w, h = det.bbox_pixel
-                    face_112 = align_face_112(frame, det.bbox_pixel, det.keypoints)
-                    embedding = recognizer.embed(face_112)
+            try:
+                while run_live:
+                    ret, frame = read_frame_with_retry(cap, max_retries=3, delay_sec=0.03)
+                    if not ret or frame is None:
+                        consecutive_read_failures += 1
+                        if consecutive_read_failures >= MAX_CONSECUTIVE_FAILURES:
+                            st.error(
+                                f"Camera read failed after {MAX_CONSECUTIVE_FAILURES} consecutive attempts "
+                                f"on backend '{actual_backend}'. The camera stream may have disconnected or "
+                                "been claimed by another process."
+                            )
+                            break
+                        time.sleep(0.04)
+                        continue
 
-                    if embedding is None:
-                        label = "MODEL_ERROR"
-                        color = (128, 128, 128)
-                    else:
-                        match = recognizer.match(embedding, enrolled)
+                    consecutive_read_failures = 0  # reset on successful read
+                    display = frame.copy()
+                    detections = detector.detect(frame)
+                    statuses = []
 
-                        # Record to DB (non-duplicate, non-spam — frame_idx gated)
-                        if frame_idx % 10 == 0:  # record every ~10 frames
-                            with get_db()() as db:
-                                evt = record_attendance(
-                                    db, active_session_id, match,
-                                    frame_index=frame_idx,
-                                    pad_status="PAD_UNAVAILABLE",
-                                )
-                            if (match.status == MatchStatus.PRESENT and
-                                    match.student_id and
-                                    match.student_id not in already_present):
-                                already_present.add(match.student_id)
-                                # Reload enrolled after first PRESENT (so averaging works)
+                    for det in detections:
+                        x, y, w, h = det.bbox_pixel
+                        face_112 = align_face_112(frame, det.bbox_pixel, det.keypoints)
+                        embedding = recognizer.embed(face_112)
 
-                        # Build overlay label
-                        sim_str = f"{match.similarity:.2f}" if match.similarity is not None else "—"
-                        label = f"{match.status.value} | sim={sim_str} | PAD:UNAVAIL"
-                        if match.student_name:
-                            label = f"{match.student_name} | {label}"
+                        if embedding is None:
+                            label = "MODEL_ERROR"
+                            color = (128, 128, 128)
+                        elif not has_enrolled:
+                            label = "UNENROLLED_SYSTEM | Enroll students first | PAD:UNAVAIL"
+                            color = (0, 165, 255)
+                            statuses.append({
+                                "status": "UNENROLLED_SYSTEM",
+                                "message": "No students enrolled in database. Enroll students first.",
+                            })
+                        else:
+                            match = recognizer.match(embedding, enrolled)
 
-                        color = {
-                            MatchStatus.PRESENT:         (0, 200, 0),
-                            MatchStatus.REVIEW_REQUIRED: (0, 165, 255),
-                            MatchStatus.UNKNOWN:         (0, 0, 200),
-                            MatchStatus.MODEL_ERROR:     (128, 128, 128),
-                        }.get(match.status, (200, 200, 0))
+                            # Record to DB (non-duplicate, non-spam — frame_idx gated + 30s cooldown for UNKNOWN)
+                            if frame_idx % 10 == 0:  # evaluate persistence every ~10 frames
+                                with get_db()() as db:
+                                    evt = record_attendance(
+                                        db, active_session_id, match,
+                                        frame_index=frame_idx,
+                                        pad_status="PAD_UNAVAILABLE",
+                                        cooldown_seconds=30,
+                                    )
+                                if (match.status == MatchStatus.PRESENT and
+                                        match.student_id and
+                                        match.student_id not in already_present):
+                                    already_present.add(match.student_id)
 
-                        statuses.append(match.to_dict())
+                            # Build overlay label
+                            sim_str = format_similarity(match.similarity, 2, "—")
+                            label = f"{match.status.value} | sim={sim_str} | PAD:UNAVAIL"
+                            if match.student_name:
+                                label = f"{match.student_name} | {label}"
 
-                    cv2.rectangle(display, (x, y), (x+w, y+h), color, 2)
-                    cv2.putText(display, label, (x, max(y-6, 12)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
+                            color = {
+                                MatchStatus.PRESENT:         (0, 200, 0),
+                                MatchStatus.REVIEW_REQUIRED: (0, 165, 255),
+                                MatchStatus.UNKNOWN:         (0, 0, 200),
+                                MatchStatus.MODEL_ERROR:     (128, 128, 128),
+                            }.get(match.status, (200, 200, 0))
 
-                if not detections:
-                    cv2.putText(display, "NO_FACE", (10, 30),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 200), 2)
+                            statuses.append(match.to_dict())
 
-                # Add frame counter
-                cv2.putText(display, f"frame={frame_idx}", (10, display.shape[0]-10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (180,180,180), 1)
+                        cv2.rectangle(display, (x, y), (x+w, y+h), color, 2)
+                        cv2.putText(display, label, (x, max(y-6, 12)),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1, cv2.LINE_AA)
 
-                frame_placeholder.image(
-                    cv2.cvtColor(display, cv2.COLOR_BGR2RGB),
-                    channels="RGB", use_container_width=True,
-                )
-                if statuses:
-                    status_placeholder.json(statuses[0])
+                    if not detections:
+                        cv2.putText(display, "NO_FACE", (10, 30),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 200), 2)
 
-                frame_idx += 1
-                time.sleep(frame_delay / 1000)
+                    # Add frame counter & backend status
+                    cv2.putText(display, f"frame={frame_idx} | backend={actual_backend}", (10, display.shape[0]-10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (180,180,180), 1)
 
-        finally:
-            cap.release()
+                    frame_placeholder.image(
+                        cv2.cvtColor(display, cv2.COLOR_BGR2RGB),
+                        channels="RGB", use_container_width=True,
+                    )
+                    if statuses:
+                        status_placeholder.json(statuses[0])
+
+                    frame_idx += 1
+                    time.sleep(frame_delay / 1000)
+
+            finally:
+                release_camera(cap)
 
     elif not run_live:
         frame_placeholder.info("Toggle 'Run webcam' to start.")
@@ -286,36 +342,45 @@ elif page == "➕ Enroll Student":
         st.caption("Capture 3–5 images from slightly different angles for best results.")
 
         if st.button("📸 Capture face template"):
-            cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-            captured_ok = False
-            for attempt in range(10):
-                ret, frame = cap.read()
-                if not ret:
-                    continue
-                dets = detector.detect(frame)
-                if dets:
-                    det = max(dets, key=lambda d: d.confidence)
-                    face_112 = align_face_112(frame, det.bbox_pixel, det.keypoints)
-                    embedding = recognizer.embed(face_112)
-                    if embedding is not None:
-                        with get_db()() as db:
-                            store_template(
-                                db, sid, embedding.tolist(),
-                                model_name=recognizer.MODEL_NAME,
-                                model_checkpoint=recognizer.MODEL_CHECKPOINT,
-                                preprocessing=recognizer.PREPROCESSING,
-                                quality_score=det.confidence,
-                            )
-                        st.image(cv2.cvtColor(face_112, cv2.COLOR_BGR2RGB),
-                                 caption=f"Captured (confidence={det.confidence:.2f})",
-                                 width=150)
-                        st.success("Template stored.")
-                        captured_ok = True
-                        break
-                time.sleep(0.1)
-            cap.release()
-            if not captured_ok:
-                st.error("Could not detect a face. Check lighting and camera angle.")
+            cap, actual_b, open_err = open_camera(index=0, warmup_frames=3)
+            if cap is None:
+                st.error(f"Could not open camera device 0: {open_err}")
+                diag = diagnose_camera(0)
+                st.json(diag)
+            else:
+                captured_ok = False
+                try:
+                    for attempt in range(15):
+                        ret, frame = read_frame_with_retry(cap, max_retries=2)
+                        if not ret or frame is None:
+                            continue
+                        dets = detector.detect(frame)
+                        if dets:
+                            det = max(dets, key=lambda d: d.confidence)
+                            face_112 = align_face_112(frame, det.bbox_pixel, det.keypoints)
+                            embedding = recognizer.embed(face_112)
+                            if embedding is not None:
+                                with get_db()() as db:
+                                    store_template(
+                                        db, sid, embedding.tolist(),
+                                        model_name=recognizer.MODEL_NAME,
+                                        model_checkpoint=recognizer.MODEL_CHECKPOINT,
+                                        preprocessing=recognizer.PREPROCESSING,
+                                        quality_score=det.confidence,
+                                    )
+                                conf_str = f"{det.confidence:.2f}" if det.confidence is not None else "N/A"
+                                st.image(cv2.cvtColor(face_112, cv2.COLOR_BGR2RGB),
+                                         caption=f"Captured (confidence={conf_str})",
+                                         width=150)
+                                st.success("Template stored.")
+                                captured_ok = True
+                                break
+                        time.sleep(0.08)
+                finally:
+                    release_camera(cap)
+
+                if not captured_ok:
+                    st.error("Could not detect a clear face. Ensure your face is centered with adequate lighting.")
 
         if st.button("Done enrolling"):
             del st.session_state["enroll_student_id"]
@@ -353,17 +418,28 @@ elif page == "🔍 Review Queue":
     else:
         for evt in pending:
             student = students.get(evt.student_id)
+            sim_display = format_similarity(evt.similarity_score, 3, "N/A")
             with st.expander(
                 f"[{evt.status}] Event #{evt.id} — "
                 f"{student.pseudonym if student else 'UNKNOWN'} — "
-                f"sim={evt.similarity_score:.3f if evt.similarity_score else 'N/A'}"
+                f"sim={sim_display}"
             ):
+                sim_val = (
+                    round(float(evt.similarity_score), 4)
+                    if (evt.similarity_score is not None and not np.isnan(float(evt.similarity_score)))
+                    else None
+                )
+                thresh_val = (
+                    round(float(evt.similarity_threshold), 4)
+                    if (evt.similarity_threshold is not None and not np.isnan(float(evt.similarity_threshold)))
+                    else None
+                )
                 st.json({
                     "event_id": evt.id,
                     "status": evt.status,
                     "student": student.pseudonym if student else None,
-                    "similarity_score": evt.similarity_score,
-                    "similarity_threshold": evt.similarity_threshold,
+                    "similarity_score": sim_val,
+                    "similarity_threshold": thresh_val,
                     "pad_status": evt.pad_status,
                     "recorded_at": str(evt.recorded_at),
                 })
@@ -412,11 +488,16 @@ elif page == "📋 Session History":
             with get_db()() as db:
                 for evt in events:
                     student = db.query(Student).filter_by(id=evt.student_id).first() if evt.student_id else None
+                    sim_val = (
+                        round(float(evt.similarity_score), 4)
+                        if (evt.similarity_score is not None and not np.isnan(float(evt.similarity_score)))
+                        else None
+                    )
                     rows.append({
                         "event_id": evt.id,
                         "pseudonym": student.pseudonym if student else "UNKNOWN",
                         "status": evt.status,
-                        "similarity_score": round(evt.similarity_score, 4) if evt.similarity_score else None,
+                        "similarity_score": sim_val,
                         "pad_status": evt.pad_status,
                         "accepted": evt.is_accepted,
                         "recorded_at": str(evt.recorded_at)[:19],
@@ -483,6 +564,9 @@ elif page == "🔧 Diagnostics":
                       "CASO-PAD (Sci. Reports 2026) weights unverified.",
             "ui_label": "PAD_UNAVAILABLE",
         })
+
+        st.subheader("Camera Subsystem")
+        st.json(diagnose_camera(0))
 
         st.subheader("Environment")
         st.json({

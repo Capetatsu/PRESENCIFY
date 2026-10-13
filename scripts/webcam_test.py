@@ -128,14 +128,28 @@ def main() -> int:
         "--save-frame", action="store_true",
         help="Save first frame to experiments/webcam_test_frame.png."
     )
+    parser.add_argument(
+        "--diagnose", action="store_true",
+        help="Run comprehensive diagnostic scan across all available backends."
+    )
     args = parser.parse_args()
 
     print("=" * 60)
     print("SmartAttend – Milestone 1: Webcam Test")
     print(f"OpenCV version : {cv2.__version__}")
     print(f"Camera index   : {args.camera_index}")
-    print(f"Mode           : {'headless' if args.headless else 'live'}")
+    print(f"Mode           : {'diagnose' if args.diagnose else ('headless' if args.headless else 'live')}")
     print("=" * 60)
+
+    if args.diagnose:
+        from pathlib import Path
+        src_path = Path(__file__).resolve().parent.parent / "src"
+        sys.path.insert(0, str(src_path))
+        from smartattend.camera import diagnose_camera
+        diag = diagnose_camera(args.camera_index)
+        import json
+        print(json.dumps(diag, indent=2))
+        return 0 if diag["is_accessible"] else 1
 
     try:
         cap, backend = open_camera(args.camera_index)
