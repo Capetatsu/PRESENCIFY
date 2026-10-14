@@ -55,9 +55,178 @@ from smartattend.recognizer import FaceRecognizer, MatchStatus
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="SmartAttend",
-    page_icon="🎓",
     layout="wide",
     initial_sidebar_state="expanded",
+)
+
+# ── Pure Black Dark Theme Styling ──────────────────────────────────────────────
+st.markdown(
+    """
+    <style>
+    /* Global Application Canvas: Neutral Pure Black */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] {
+        background-color: #000000 !important;
+        color: #F5F5F5 !important;
+    }
+
+    [data-testid="stHeader"] {
+        background-color: #000000 !important;
+        border-bottom: 1px solid #292929 !important;
+    }
+
+    /* Sidebar Canvas */
+    [data-testid="stSidebar"], [data-testid="stSidebarContent"] {
+        background-color: #080808 !important;
+        border-right: 1px solid #292929 !important;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+        color: #F5F5F5 !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.01em !important;
+    }
+
+    p, span, label, div {
+        color: #F5F5F5;
+    }
+
+    .stCaption, [data-testid="stCaptionContainer"] {
+        color: #A3A3A3 !important;
+        font-size: 0.85rem !important;
+    }
+
+    hr {
+        border: none !important;
+        border-top: 1px solid #292929 !important;
+        margin: 1.25rem 0 !important;
+    }
+
+    /* Form Controls: Inputs and Selects */
+    .stTextInput input, .stNumberInput input, textarea {
+        background-color: #161616 !important;
+        color: #F5F5F5 !important;
+        border: 1px solid #292929 !important;
+        border-radius: 4px !important;
+    }
+
+    .stTextInput input:focus, .stNumberInput input:focus, textarea:focus {
+        border-color: #E53935 !important;
+        box-shadow: 0 0 0 1px #E53935 !important;
+    }
+
+    [data-baseweb="select"] > div {
+        background-color: #161616 !important;
+        color: #F5F5F5 !important;
+        border: 1px solid #292929 !important;
+        border-radius: 4px !important;
+    }
+
+    [data-baseweb="popover"], [data-baseweb="menu"] {
+        background-color: #161616 !important;
+        border: 1px solid #292929 !important;
+    }
+
+    [data-baseweb="menu"] * {
+        color: #F5F5F5 !important;
+    }
+
+    /* Buttons: Secondary and Primary */
+    .stButton > button {
+        background-color: #161616 !important;
+        color: #F5F5F5 !important;
+        border: 1px solid #292929 !important;
+        border-radius: 4px !important;
+        font-weight: 500 !important;
+        padding: 0.4rem 0.9rem !important;
+        transition: background-color 0.15s ease, border-color 0.15s ease !important;
+    }
+
+    .stButton > button:hover {
+        background-color: #242424 !important;
+        border-color: #E53935 !important;
+        color: #FFFFFF !important;
+    }
+
+    .stButton > button:active {
+        background-color: #E53935 !important;
+        color: #FFFFFF !important;
+    }
+
+    .stButton > button[kind="primary"] {
+        background-color: #E53935 !important;
+        border: 1px solid #E53935 !important;
+        color: #FFFFFF !important;
+    }
+
+    .stButton > button[kind="primary"]:hover {
+        background-color: #C62828 !important;
+        border-color: #C62828 !important;
+    }
+
+    /* Cards, Forms, and Expanders */
+    [data-testid="stExpander"] {
+        background-color: #101010 !important;
+        border: 1px solid #292929 !important;
+        border-radius: 4px !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    [data-testid="stExpander"] summary {
+        color: #F5F5F5 !important;
+        font-weight: 500 !important;
+    }
+
+    [data-testid="stExpander"] summary:hover {
+        color: #E53935 !important;
+    }
+
+    [data-testid="stForm"] {
+        background-color: #101010 !important;
+        border: 1px solid #292929 !important;
+        border-radius: 6px !important;
+        padding: 1.25rem !important;
+    }
+
+    /* Alerts and Status Banners */
+    [data-testid="stAlert"] {
+        background-color: #101010 !important;
+        border: 1px solid #292929 !important;
+        border-radius: 4px !important;
+        color: #F5F5F5 !important;
+    }
+
+    [data-testid="stAlert"] div {
+        color: #F5F5F5 !important;
+    }
+
+    /* JSON, Code, and Preformatted blocks */
+    [data-testid="stJson"], pre, code {
+        background-color: #101010 !important;
+        border: 1px solid #292929 !important;
+        border-radius: 4px !important;
+        color: #F5F5F5 !important;
+    }
+
+    /* Sidebar Radio Navigation */
+    [data-testid="stRadio"] label {
+        color: #F5F5F5 !important;
+        cursor: pointer !important;
+    }
+
+    [data-testid="stRadio"] [role="radiogroup"] {
+        gap: 0.35rem !important;
+    }
+
+    /* DataTables and DataFrames */
+    [data-testid="stDataFrame"] {
+        background-color: #101010 !important;
+        border: 1px solid #292929 !important;
+        border-radius: 4px !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 # ── Database ───────────────────────────────────────────────────────────────────
@@ -85,14 +254,14 @@ detector = get_detector_instance()
 recognizer = get_recognizer_instance()
 
 # ── Sidebar navigation ─────────────────────────────────────────────────────────
-st.sidebar.title("🎓 SmartAttend")
-st.sidebar.caption("Research prototype · CPU-only · No CUDA")
+st.sidebar.title("SmartAttend")
+st.sidebar.caption("Research prototype | CPU-only | No CUDA")
 
 page = st.sidebar.radio(
-    "Navigate",
-    ["📷 Live Attendance", "➕ Enroll Student",
-     "🔍 Review Queue", "📋 Session History",
-     "📤 Export", "🔧 Diagnostics"],
+    "Navigation",
+    ["Live Attendance", "Enroll Student",
+     "Review Queue", "Session History",
+     "Export", "Diagnostics"],
 )
 
 # PAD status banner (always visible)
@@ -101,16 +270,15 @@ st.sidebar.warning(
     "**PAD: UNAVAILABLE**\n\n"
     "No presentation-attack detection model is loaded. "
     "The system cannot detect spoofing (printed photos, replays). "
-    "All decisions show PAD_UNAVAILABLE.",
-    icon="⚠️",
+    "All decisions show PAD_UNAVAILABLE."
 )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE: Live Attendance
 # ═══════════════════════════════════════════════════════════════════════════════
-if page == "📷 Live Attendance":
-    st.title("📷 Live Attendance")
+if page == "Live Attendance":
+    st.title("Live Attendance")
 
     with get_db()() as db:
         sessions = db.query(AttendanceSession).filter_by(is_active=True).all()
@@ -127,7 +295,7 @@ if page == "📷 Live Attendance":
             active_session_id = None
 
         new_name = st.text_input("New session name")
-        if st.button("▶ Start session") and new_name.strip():
+        if st.button("Start session") and new_name.strip():
             with get_db()() as db:
                 s = create_session(db, new_name.strip())
                 active_session_id = s.id
@@ -135,20 +303,20 @@ if page == "📷 Live Attendance":
             st.rerun()
 
         if active_session_id:
-            if st.button("⏹ End current session"):
+            if st.button("End current session"):
                 with get_db()() as db:
                     end_session(db, active_session_id)
                 st.success("Session ended.")
                 st.rerun()
 
         st.markdown("---")
-        with st.expander("📷 Camera Settings & Diagnostics", expanded=False):
+        with st.expander("Camera Settings and Diagnostics", expanded=False):
             cam_idx = st.number_input("Camera index", min_value=0, max_value=5, value=0, step=1)
             cam_backend_opt = st.selectbox(
                 "Preferred backend",
                 ["Auto (DirectShow -> MSMF -> ANY)", "DirectShow", "MSMF", "ANY"],
             )
-            if st.button("🔍 Run Camera Diagnostic", key="btn_diag_cam"):
+            if st.button("Run Camera Diagnostic", key="btn_diag_cam"):
                 diag = diagnose_camera(int(cam_idx))
                 if diag["is_accessible"]:
                     st.success(f"Camera index {cam_idx} accessible using '{diag['recommended_backend']}'.")
@@ -156,9 +324,9 @@ if page == "📷 Live Attendance":
                     st.error(f"Camera index {cam_idx} could not be opened on any backend.")
                 st.json(diag)
                 for h in diag.get("hints", []):
-                    st.caption(f"• {h}")
+                    st.caption(f"- {h}")
 
-        run_live = st.toggle("📹 Run webcam", value=False)
+        run_live = st.toggle("Run webcam", value=False)
         frame_delay = st.slider("Frame skip (ms)", 50, 500, 100)
 
     with col_frame:
@@ -172,8 +340,8 @@ if page == "📷 Live Attendance":
         has_enrolled = len(enrolled) > 0
         if not has_enrolled:
             st.warning(
-                "⚠️ No students enrolled yet. Face recognition requires at least one enrolled student. "
-                "Go to '➕ Enroll Student' to add participants before taking attendance."
+                "No students enrolled yet. Face recognition requires at least one enrolled student. "
+                "Go to 'Enroll Student' to add participants before taking attendance."
             )
 
         backend_pref = None if "Auto" in cam_backend_opt else (
@@ -182,12 +350,12 @@ if page == "📷 Live Attendance":
         cap, actual_backend, open_err = open_camera(index=int(cam_idx), preferred_backend=backend_pref)
 
         if cap is None:
-            st.error(f"❌ Camera initialization failed on device index {cam_idx}: {open_err}")
+            st.error(f"Camera initialization failed on device index {cam_idx}: {open_err}")
             diag = diagnose_camera(int(cam_idx))
-            with st.expander("Camera Diagnostic Details & Troubleshooting", expanded=True):
+            with st.expander("Camera Diagnostic Details and Troubleshooting", expanded=True):
                 st.json(diag)
                 for h in diag.get("hints", []):
-                    st.info(f"💡 {h}")
+                    st.info(f"{h}")
         else:
             frame_idx = 0
             consecutive_read_failures = 0
@@ -292,7 +460,7 @@ if page == "📷 Live Attendance":
                                         )
 
                             # Build overlay label
-                            sim_str = format_similarity(match.similarity, 2, "—")
+                            sim_str = format_similarity(match.similarity, 2, "N/A")
                             label = f"{match.status.value} | sim={sim_str} | PAD:UNAVAIL"
                             if match.student_name:
                                 label = f"{match.student_name} | {label}"
@@ -347,8 +515,8 @@ if page == "📷 Live Attendance":
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE: Enroll Student
 # ═══════════════════════════════════════════════════════════════════════════════
-elif page == "➕ Enroll Student":
-    st.title("➕ Enroll Student")
+elif page == "Enroll Student":
+    st.title("Enroll Student")
     st.info(
         "Enrollment requires explicit consent. "
         "Only enroll people who have agreed to participate in this research prototype."
@@ -386,7 +554,7 @@ elif page == "➕ Enroll Student":
         st.markdown(f"**Capturing templates for: {student.display_name if student else sid}**")
         st.caption("Capture 3–5 images from slightly different angles for best results.")
 
-        if st.button("📸 Capture face template"):
+        if st.button("Capture face template"):
             cap, actual_b, open_err = open_camera(index=0, warmup_frames=3)
             if cap is None:
                 st.error(f"Could not open camera device 0: {open_err}")
@@ -439,7 +607,7 @@ elif page == "➕ Enroll Student":
         if students:
             for s in students:
                 n_tmpl = len(s.templates)
-                st.write(f"• **{s.pseudonym}** ({s.display_name}) — {n_tmpl} template(s)")
+                st.write(f"- **{s.pseudonym}** ({s.display_name}) - {n_tmpl} template(s)")
         else:
             st.info("No students enrolled yet.")
 
@@ -447,8 +615,8 @@ elif page == "➕ Enroll Student":
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE: Review Queue
 # ═══════════════════════════════════════════════════════════════════════════════
-elif page == "🔍 Review Queue":
-    st.title("🔍 Teacher Review Queue")
+elif page == "Review Queue":
+    st.title("Teacher Review Queue")
     st.caption(
         "Review borderline-confidence matches flagged by the model. "
         "All teacher decisions are recorded in the audit log. "
@@ -483,7 +651,7 @@ elif page == "🔍 Review Queue":
             students = {s.id: s for s in db.query(Student).all()}
 
         if not pending:
-            st.success("✅ No pending review items for this session.")
+            st.success("No pending review items for this session.")
         else:
             st.info(f"{len(pending)} item(s) pending teacher review.")
             for evt in pending:
@@ -491,8 +659,8 @@ elif page == "🔍 Review Queue":
                 sim_display = format_similarity(evt.similarity_score, 3, "N/A")
                 label_name = student.pseudonym if student else "UNKNOWN_PERSON"
                 with st.expander(
-                    f"[{evt.status}] Event #{evt.id} — "
-                    f"{label_name} — "
+                    f"[{evt.status}] Event #{evt.id} | "
+                    f"{label_name} | "
                     f"sim={sim_display}"
                 ):
                     sim_val = (
@@ -535,19 +703,19 @@ elif page == "🔍 Review Queue":
                     reason = st.text_input("Reason (optional)", key=f"reason_{evt.id}")
                     with col1:
                         if can_mark_present:
-                            if st.button("✅ Mark PRESENT", key=f"pres_{evt.id}"):
+                            if st.button("Mark PRESENT", key=f"pres_{evt.id}"):
                                 with get_db()() as db:
                                     teacher_review(db, evt.id, "PRESENT", reason or "verified by teacher")
                                 st.success(f"Marked PRESENT for {student.pseudonym}.")
                                 st.rerun()
                     with col2:
-                        if st.button("❌ Mark REJECTED", key=f"rej_{evt.id}"):
+                        if st.button("Mark REJECTED", key=f"rej_{evt.id}"):
                             with get_db()() as db:
                                 teacher_review(db, evt.id, "REJECTED", reason or "rejected by teacher")
                             st.success("Marked REJECTED.")
                             st.rerun()
                     with col3:
-                        if st.button("🔕 Dismiss", key=f"dis_{evt.id}"):
+                        if st.button("Dismiss", key=f"dis_{evt.id}"):
                             with get_db()() as db:
                                 teacher_review(db, evt.id, "DISMISSED", reason or "dismissed by teacher")
                             st.rerun()
@@ -557,8 +725,8 @@ elif page == "🔍 Review Queue":
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE: Session History
 # ═══════════════════════════════════════════════════════════════════════════════
-elif page == "📋 Session History":
-    st.title("📋 Session History")
+elif page == "Session History":
+    st.title("Session History")
 
     with get_db()() as db:
         sessions = db.query(AttendanceSession).order_by(
@@ -570,9 +738,9 @@ elif page == "📋 Session History":
             events = db.query(AttendanceEvent).filter_by(session_id=sess.id).all()
         present = sum(1 for e in events if e.status == "PRESENT" and e.is_accepted)
         review  = sum(1 for e in events if e.status == "REVIEW_REQUIRED")
-        status_tag = "🟢 Active" if sess.is_active else "🔵 Ended"
+        status_tag = "Active" if sess.is_active else "Ended"
 
-        with st.expander(f"{status_tag} | {sess.name} | {present} present | {review} review"):
+        with st.expander(f"[{status_tag}] {sess.name} | {present} present | {review} review"):
             import pandas as pd
             rows = []
             with get_db()() as db:
@@ -599,9 +767,9 @@ elif page == "📋 Session History":
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE: Export
 # ═══════════════════════════════════════════════════════════════════════════════
-elif page == "📤 Export":
-    st.title("📤 Export")
-    st.info("All exports use pseudonyms — display names and raw frames are not included.")
+elif page == "Export":
+    st.title("Export")
+    st.info("All exports use pseudonyms - display names and raw frames are not included.")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -616,7 +784,7 @@ elif page == "📤 Export":
             st.success(f"Saved: {path}")
 
     with col2:
-        if st.button("Export environment + model manifest"):
+        if st.button("Export environment and model manifest"):
             path1 = export_environment(recognizer.status, detector.status)
             path2 = export_model_manifest(recognizer.status, detector.status)
             st.success(f"Saved:\n  {path1}\n  {path2}")
@@ -627,15 +795,15 @@ elif page == "📤 Export":
     if exports:
         st.markdown("**Existing exports:**")
         for f in sorted(exports):
-            st.write(f"• `{f.name}` ({f.stat().st_size} bytes)")
+            st.write(f"- `{f.name}` ({f.stat().st_size} bytes)")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PAGE: Diagnostics
 # ═══════════════════════════════════════════════════════════════════════════════
-elif page == "🔧 Diagnostics":
-    st.title("🔧 Diagnostics")
-    st.caption("Exact model/checkpoint info, device, versions and load status.")
+elif page == "Diagnostics":
+    st.title("Diagnostics")
+    st.caption("Exact model and checkpoint details, device specifications, library versions, and load status.")
 
     import torch, cv2 as _cv2, platform
 
@@ -670,7 +838,8 @@ elif page == "🔧 Diagnostics":
 
     st.markdown("---")
     st.caption(
-        "SmartAttend research prototype · CPU-only · "
-        "EdgeFace XS (CC BY-NC-SA 4.0, non-commercial research) · "
+        "SmartAttend research prototype | CPU-only | "
+        "EdgeFace XS (CC BY-NC-SA 4.0, non-commercial research) | "
         "MediaPipe BlazeFace (Apache 2.0)"
     )
+

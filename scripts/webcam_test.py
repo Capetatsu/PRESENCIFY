@@ -135,7 +135,7 @@ def main() -> int:
     args = parser.parse_args()
 
     print("=" * 60)
-    print("SmartAttend – Milestone 1: Webcam Test")
+    print("SmartAttend - Milestone 1: Webcam Test")
     print(f"OpenCV version : {cv2.__version__}")
     print(f"Camera index   : {args.camera_index}")
     print(f"Mode           : {'diagnose' if args.diagnose else ('headless' if args.headless else 'live')}")
