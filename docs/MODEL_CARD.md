@@ -1,4 +1,4 @@
-# SmartAttend – Model Card & System Registry
+# PRESENCIFY – Model Card & System Registry
 
 **Last updated:** 2026-10-14  
 **Target Environment:** Intel i3-class CPU (6 threads), 8 GB RAM, Windows 11, No CUDA / NVIDIA GPU

@@ -1,4 +1,4 @@
-# SmartAttend – CPU Smoke-Test Plan
+# PRESENCIFY – CPU Smoke-Test Plan
 
 **Machine target:** Intel i3-class CPU, 8 GB RAM, Intel UHD, no CUDA, Windows, Python 3.12.1  
 **Purpose:** Isolated verification of each model candidate before integration.  
@@ -69,7 +69,7 @@ Script: `scripts/smoke/smoke_detector_haar.py`
 
 | Step | Detail |
 |---|---|
-| License gate | Confirm SmartAttend qualifies as non-commercial research before using |
+| License gate | Confirm PRESENCIFY qualifies as non-commercial research before using |
 | Load method | `torch.hub.load('otroshi/edgeface', 'edgeface_xs_gamma_06', source='github', pretrained=True)` — no mxnet needed for inference |
 | Input shape | 112×112 aligned face crop |
 | Output | 512-d embedding |
@@ -97,7 +97,7 @@ No public code or checkpoint found. Skip smoke test; note in MODEL_CARD.md.
 | Input | 256×256 face crop (single RGB frame) |
 | Output | Scalar score or binary logit (genuine/spoof) |
 | Pass criteria | Model loads on CPU; single-frame inference <200 ms; scores differ between a frontal face image and a printed-photo image |
-| Notes | Paper trained on Replay-Attack, Replay-Mobile, ROSE-Youtu, OULU-NPU, SiW-Mv2 — do not transfer those benchmark metrics to SmartAttend results |
+| Notes | Paper trained on Replay-Attack, Replay-Mobile, ROSE-Youtu, OULU-NPU, SiW-Mv2 — do not transfer those benchmark metrics to PRESENCIFY results |
 | Fallback trigger | Weights unavailable → UI must show `PAD_UNAVAILABLE`; do not fake PAD |
 
 ---

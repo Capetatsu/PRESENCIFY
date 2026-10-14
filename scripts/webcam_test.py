@@ -1,5 +1,5 @@
 """
-webcam_test.py – SmartAttend Milestone 1: Webcam smoke test.
+webcam_test.py – PRESENCIFY Milestone 1: Webcam smoke test.
 
 Tests that:
   1. A webcam can be opened on Windows (DirectShow → MSMF → any).
@@ -96,11 +96,11 @@ def run_live(cap: cv2.VideoCapture, save_frame: bool = False) -> dict:
                 print(f"[camera] Frame saved to {save_path}")
 
         # Overlay
-        label = f"SmartAttend – webcam test  |  frame {frame_count}  |  press q to quit"
+        label = f"PRESENCIFY – webcam test  |  frame {frame_count}  |  press q to quit"
         cv2.putText(frame, label, (10, 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 220, 0), 1, cv2.LINE_AA)
 
-        cv2.imshow("SmartAttend – Webcam Test", frame)
+        cv2.imshow("PRESENCIFY – Webcam Test", frame)
         key = cv2.waitKey(1) & 0xFF
         if key in (ord("q"), ord("Q"), 27):  # q or ESC
             break
@@ -114,7 +114,7 @@ def run_live(cap: cv2.VideoCapture, save_frame: bool = False) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="SmartAttend webcam smoke test (Milestone 1)"
+        description="PRESENCIFY webcam smoke test (Milestone 1)"
     )
     parser.add_argument(
         "--headless", action="store_true",
@@ -135,7 +135,7 @@ def main() -> int:
     args = parser.parse_args()
 
     print("=" * 60)
-    print("SmartAttend - Milestone 1: Webcam Test")
+    print("PRESENCIFY - Milestone 1: Webcam Test")
     print(f"OpenCV version : {cv2.__version__}")
     print(f"Camera index   : {args.camera_index}")
     print(f"Mode           : {'diagnose' if args.diagnose else ('headless' if args.headless else 'live')}")
@@ -145,7 +145,7 @@ def main() -> int:
         from pathlib import Path
         src_path = Path(__file__).resolve().parent.parent / "src"
         sys.path.insert(0, str(src_path))
-        from smartattend.camera import diagnose_camera
+        from presencify.camera import diagnose_camera
         diag = diagnose_camera(args.camera_index)
         import json
         print(json.dumps(diag, indent=2))

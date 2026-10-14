@@ -1,4 +1,4 @@
-# SmartAttend – pinned requirements (CPU-only, Windows, Python 3.12)
+# PRESENCIFY – pinned requirements (CPU-only, Windows, Python 3.12)
 # Install: pip install -r requirements.txt
 
 # Core ML / vision

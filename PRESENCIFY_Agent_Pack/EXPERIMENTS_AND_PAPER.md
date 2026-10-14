@@ -1,4 +1,4 @@
-# SmartAttend --- Evaluation Protocol and Paper Plan
+# PRESENCIFY --- Evaluation Protocol and Paper Plan
 
 ## Research question
 
@@ -104,4 +104,4 @@ latency.
 Never claim "100% accurate," "prevents all proxy attendance," "cannot be
 spoofed," "works in every classroom," "first-ever system," or
 "real-time" without measured evidence. Do not present published
-benchmark numbers as SmartAttend results.
+benchmark numbers as PRESENCIFY results.

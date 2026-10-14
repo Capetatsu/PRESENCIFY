@@ -1,4 +1,4 @@
-# Agent Rules --- SmartAttend
+# Agent Rules --- PRESENCIFY
 
 ## Before coding
 
@@ -35,7 +35,7 @@
     a backbone referenced by a paper.
 -   Do not invent citations, metrics, sample sizes, weights or code
     availability.
--   A paper's benchmark numbers are not SmartAttend results.
+-   A paper's benchmark numbers are not PRESENCIFY results.
 -   If a paper's method has no accessible runnable code/checkpoint, mark
     it "reviewed candidate, not implemented."
 -   The paper must name the model/checkpoint the code actually uses.

@@ -1,4 +1,4 @@
-# SmartAttend --- Project Context and System Specification
+# PRESENCIFY --- Project Context and System Specification
 
 ## Goal
 
@@ -89,7 +89,7 @@ replace an existing stack without inspection.
     content-adaptive spatial operators," Scientific Reports (2026), DOI
     https://doi.org/10.1038/s41598-026-67944-6
 -   Inspect official code, supplementary files, checkpoint and
-    preprocessing. Published benchmark metrics are not SmartAttend
+    preprocessing. Published benchmark metrics are not PRESENCIFY
     results.
 -   A blink/head-turn prompt is not equivalent to a validated PAD model.
     If no recent PAD model can be run, label the fallback and limitation

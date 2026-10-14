@@ -1,5 +1,5 @@
 """
-demo_pipeline_e2e.py – End-to-end SmartAttend verification pipeline.
+demo_pipeline_e2e.py – End-to-end PRESENCIFY verification pipeline.
 
 Performs:
   1. Initialization of SQLite database.
@@ -32,17 +32,17 @@ import numpy as np
 ROOT = Path(__file__).parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from smartattend.aligner import align_face_112
-from smartattend.attendance import (
+from presencify.aligner import align_face_112
+from presencify.attendance import (
     create_session, end_session, enroll_student, has_accepted_attendance,
     load_enrolled_embeddings, record_attendance, store_template, teacher_review,
 )
-from smartattend.database import AttendanceEvent, get_session_factory, init_db
-from smartattend.detector import FaceDetector
-from smartattend.export import (
+from presencify.database import AttendanceEvent, get_session_factory, init_db
+from presencify.detector import FaceDetector
+from presencify.export import (
     export_environment, export_model_manifest, export_predictions, export_summary,
 )
-from smartattend.recognizer import FaceRecognizer, MatchStatus
+from presencify.recognizer import FaceRecognizer, MatchStatus
 
 
 def create_synthetic_face(seed: int = 42, size: int = 480) -> np.ndarray:
@@ -62,11 +62,11 @@ def create_synthetic_face(seed: int = 42, size: int = 480) -> np.ndarray:
 
 def run_e2e(use_webcam: bool = False) -> int:
     print("=" * 65)
-    print("SmartAttend - End-to-End Pipeline Verification")
+    print("PRESENCIFY - End-to-End Pipeline Verification")
     print(f"Mode: {'Live Webcam' if use_webcam else 'Synthetic Simulation'}")
     print("=" * 65)
 
-    db_path = str(ROOT / "smartattend_demo.db")
+    db_path = str(ROOT / "presencify_demo.db")
     init_db(db_path)
     factory = get_session_factory(db_path)
 

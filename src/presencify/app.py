@@ -1,5 +1,5 @@
 """
-app.py – SmartAttend Streamlit Dashboard (Phase 7).
+app.py – PRESENCIFY Streamlit Dashboard (Phase 7).
 
 Pages:
   1. Live Attendance – webcam feed with detection/recognition overlay
@@ -10,8 +10,8 @@ Pages:
   6. Diagnostics     – model status, versions, latency
 
 Run:
-  python -m streamlit run src/smartattend/app.py
-  (or: streamlit run src/smartattend/app.py)
+  python -m streamlit run src/presencify/app.py
+  (or: streamlit run src/presencify/app.py)
 
 Non-negotiable rules enforced here:
   - Similarity shown as "similarity score" never "probability"
@@ -34,27 +34,27 @@ import streamlit as st
 # Make src/ importable
 sys.path.insert(0, str(Path(__file__).parents[2] / "src"))
 
-from smartattend.attendance import (
+from presencify.attendance import (
     create_session, end_session, enroll_student, load_enrolled_embeddings,
     record_attendance, store_template, teacher_review,
 )
-from smartattend.aligner import align_face_112
-from smartattend.camera import (
+from presencify.aligner import align_face_112
+from presencify.camera import (
     diagnose_camera, format_similarity, open_camera, read_frame_with_retry, release_camera,
 )
-from smartattend.database import (
+from presencify.database import (
     AttendanceEvent, AttendanceSession, ReviewEvent, Student,
     get_session_factory, init_db,
 )
-from smartattend.detector import FaceDetector
-from smartattend.export import (
+from presencify.detector import FaceDetector
+from presencify.export import (
     export_environment, export_model_manifest, export_predictions, export_summary,
 )
-from smartattend.recognizer import FaceRecognizer, MatchStatus
+from presencify.recognizer import FaceRecognizer, MatchStatus
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="SmartAttend",
+    page_title="PRESENCIFY",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -230,7 +230,7 @@ st.markdown(
 )
 
 # ── Database ───────────────────────────────────────────────────────────────────
-DB_PATH = str(Path(__file__).parents[2] / "smartattend.db")
+DB_PATH = str(Path(__file__).parents[2] / "presencify.db")
 
 @st.cache_resource
 def get_db():
@@ -254,7 +254,7 @@ detector = get_detector_instance()
 recognizer = get_recognizer_instance()
 
 # ── Sidebar navigation ─────────────────────────────────────────────────────────
-st.sidebar.title("SmartAttend")
+st.sidebar.title("PRESENCIFY")
 st.sidebar.caption("Research prototype | CPU-only | No CUDA")
 
 page = st.sidebar.radio(
@@ -790,7 +790,7 @@ elif page == "Export":
             st.success(f"Saved:\n  {path1}\n  {path2}")
 
     # Show existing exports
-    from smartattend.export import EXPERIMENTS_DIR
+    from presencify.export import EXPERIMENTS_DIR
     exports = list(EXPERIMENTS_DIR.glob("*")) if EXPERIMENTS_DIR.exists() else []
     if exports:
         st.markdown("**Existing exports:**")
@@ -838,7 +838,7 @@ elif page == "Diagnostics":
 
     st.markdown("---")
     st.caption(
-        "SmartAttend research prototype | CPU-only | "
+        "PRESENCIFY research prototype | CPU-only | "
         "EdgeFace XS (CC BY-NC-SA 4.0, non-commercial research) | "
         "MediaPipe BlazeFace (Apache 2.0)"
     )

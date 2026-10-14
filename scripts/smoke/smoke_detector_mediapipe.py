@@ -27,7 +27,7 @@ import numpy as np
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parents[2] / "src"))
-from smartattend.detector import FaceDetector, get_detector
+from presencify.detector import FaceDetector, get_detector
 
 PASS = "PASS"
 FAIL = "FAIL"

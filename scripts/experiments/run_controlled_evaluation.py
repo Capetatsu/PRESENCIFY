@@ -1,10 +1,10 @@
 """
 scripts/experiments/run_controlled_evaluation.py
 
-Controlled experimental evaluation protocol for SmartAttend.
+Controlled experimental evaluation protocol for PRESENCIFY.
 Compares:
   - Baseline Method A: Recognition-Only (Hard Threshold Decision)
-  - Proposed Method B: Confidence-Based Manual Review (SmartAttend Policy)
+  - Proposed Method B: Confidence-Based Manual Review (PRESENCIFY Policy)
 
 Dataset Provenance:
   - 1 Consented Live Subject (P001, laptop webcam across sessions/conditions; informed consent)
@@ -40,13 +40,13 @@ import numpy as np
 import pandas as pd
 from sklearn.datasets import fetch_olivetti_faces
 
-# Import SmartAttend modules
+# Import PRESENCIFY modules
 ROOT = Path(__file__).parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
-from smartattend.aligner import align_face_112
-from smartattend.detector import FaceDetector
-from smartattend.recognizer import FaceRecognizer
+from presencify.aligner import align_face_112
+from presencify.detector import FaceDetector
+from presencify.recognizer import FaceRecognizer
 
 
 def build_dataset(detector: FaceDetector):
@@ -117,7 +117,7 @@ def build_dataset(detector: FaceDetector):
 
 def run_experiment():
     print("=" * 70)
-    print("SmartAttend - Controlled Face Recognition Evaluation (Audit Verified)")
+    print("PRESENCIFY - Controlled Face Recognition Evaluation (Audit Verified)")
     print("=" * 70)
 
     detector = FaceDetector()
@@ -259,7 +259,7 @@ def run_experiment():
     A_far = A_FA / N_imp
     A_frr = (A_FR + A_Misid) / N_gen
 
-    # 5. Method B: SmartAttend Confidence Review Policy
+    # 5. Method B: PRESENCIFY Confidence Review Policy
     # Stage 1: Automated Classification
     df_test["method_B_stage1"] = "UNKNOWN"
     df_test.loc[df_test["similarity_score"] >= tau_accept, "method_B_stage1"] = "PRESENT"
@@ -351,7 +351,7 @@ def run_experiment():
     print(f"  False Accept Rate (FAR)         : {A_far*100:.2f}%")
     print(f"  False Reject Rate (FRR)         : {A_frr*100:.2f}% (FR + Misid)")
 
-    print(f"\n--- Method B: SmartAttend Policy (Stage 1: Automated) ---")
+    print(f"\n--- Method B: PRESENCIFY Policy (Stage 1: Automated) ---")
     print(f"  Auto-Stage PRESENT Genuine Correct: {B_stage1_auto_TA_id}")
     print(f"  Auto-Stage PRESENT Genuine Misid  : {B_stage1_auto_Misid}")
     print(f"  Auto-Stage PRESENT Impostor (FA)  : {B_stage1_auto_FA}")
@@ -361,7 +361,7 @@ def run_experiment():
     print(f"  Routed to Review - Impostor       : {B_stage1_rev_impostor} / {N_imp} (PREVENTED AUTO PROXY ATTENDANCE!)")
     print(f"  Total Review Queue Load           : {B_review_count} / {N_tot} ({B_review_rate*100:.2f}%)")
 
-    print(f"\n--- Method B: SmartAttend Policy (Stage 2: Post-Review Outcomes) ---")
+    print(f"\n--- Method B: PRESENCIFY Policy (Stage 2: Post-Review Outcomes) ---")
     print(f"  Rescued Genuine into PRESENT      : {B_rescued_TA_id} (Resolved from review queue)")
     print(f"  Blocked Impostors into REJECTED   : {B_rev_blocked_impostor} (Blocked from proxy attendance)")
     print(f"  Final True Accepts (Identity)     : {B_post_TA_id} / {N_gen} ({B_rec_id*100:.1f}%) [Increased from {A_TA_id}]")

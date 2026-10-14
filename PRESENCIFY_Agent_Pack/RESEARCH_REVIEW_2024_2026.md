@@ -1,6 +1,6 @@
-# SmartAttend Literature Review --- 2024--2026
+# PRESENCIFY Literature Review --- 2024--2026
 
-**Purpose:** shortlist of recent work to read for SmartAttend. Summaries
+**Purpose:** shortlist of recent work to read for PRESENCIFY. Summaries
 below are screening notes based on accessible publisher
 metadata/abstracts and official repositories; they are not a claim that
 every full text has been read cover-to-cover. Before citing detailed
@@ -175,7 +175,7 @@ matrix. All selected core references must fall within 2024--2026.
 -   Relevance: CASO-PAD, lightweight RGB single-frame MobileNetV3 with
     content-adaptive spatial operators.
 -   Feasibility: verify official code/checkpoint. The paper's benchmark
-    numbers are not SmartAttend results.
+    numbers are not PRESENCIFY results.
 -   Read: dataset protocols, HTER/EER, model size/FLOPs and
     unknown-attack generalisation.
 
@@ -280,4 +280,4 @@ For every paper actually cited in the final report, record:
 For each core paper read: abstract/introduction, method, experimental
 protocol, datasets, results and limitations. Record whether full text or
 only abstract/metadata was accessible. Never transfer a published
-benchmark number into SmartAttend's results table.
+benchmark number into PRESENCIFY's results table.

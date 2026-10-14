@@ -2,7 +2,7 @@
 camera.py – Camera capture, diagnostics, and multi-backend fallback.
 
 Provides robust camera initialization, device probing, and frame acquisition
-for the SmartAttend Streamlit dashboard and CLI diagnostics.
+for the PRESENCIFY Streamlit dashboard and CLI diagnostics.
 
 Key capabilities:
   - Multi-backend fallback on Windows (DirectShow -> MSMF -> ANY)

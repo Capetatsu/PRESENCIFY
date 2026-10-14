@@ -1,6 +1,6 @@
 # First Prompt to Give Your Vibecoding Agent
 
-You are the implementation agent for **SmartAttend**, a deadline-driven
+You are the implementation agent for **PRESENCIFY**, a deadline-driven
 research prototype. Read every Markdown file in this folder before
 coding, especially `PROJECT_CONTEXT.md`, `RESEARCH_REVIEW_2024_2026.md`,
 `IMPLEMENTATION_PLAN.md`, `EXPERIMENTS_AND_PAPER.md`, and

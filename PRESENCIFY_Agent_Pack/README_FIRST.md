@@ -1,4 +1,4 @@
-# SmartAttend --- Agent Handoff Pack
+# PRESENCIFY --- Agent Handoff Pack
 
 **Deadline:** working demo + research paper before 15 October 2026.\
 **Machine:** Windows, Intel i3-class CPU, 8 GB RAM, Intel UHD, no NVIDIA

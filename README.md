@@ -1,4 +1,4 @@
-# SmartAttend: AI-Assisted Classroom Attendance on CPU Edge Devices
+# PRESENCIFY: AI-Assisted Classroom Attendance on CPU Edge Devices
 
 [![Tests](https://img.shields.io/badge/pytest-38%20passed-brightgreen.svg)]()
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)]()
@@ -7,9 +7,9 @@
 [![Biometrics](https://img.shields.io/badge/model-EdgeFace%20XS%20%287.17MB%29-blueviolet.svg)]()
 [![Ethics](https://img.shields.io/badge/PAD%20status-Truthful%20%28PAD__UNAVAILABLE%29-yellow.svg)]()
 
-**SmartAttend** is a research prototype and local-first AI system designed to automate classroom attendance logging directly on commodity laptop hardware (Intel i3-class CPU, 8 GB RAM, integrated graphics, no NVIDIA GPU).
+**PRESENCIFY** is a research prototype and local-first AI system designed to automate classroom attendance logging directly on commodity laptop hardware (Intel i3-class CPU, 8 GB RAM, integrated graphics, no NVIDIA GPU).
 
-Rather than enforcing brittle hard-threshold decision boundaries that cause high false absences, SmartAttend introduces a **dual-threshold confidence-based review policy**: high-similarity students are automatically marked Present, low-similarity strangers are rejected, and ambiguous borderline matches are routed to an audited instructor queue.
+Rather than enforcing brittle hard-threshold decision boundaries that cause high false absences, PRESENCIFY introduces a **dual-threshold confidence-based review policy**: high-similarity students are automatically marked Present, low-similarity strangers are rejected, and ambiguous borderline matches are routed to an audited instructor queue.
 
 ---
 
@@ -17,7 +17,7 @@ Rather than enforcing brittle hard-threshold decision boundaries that cause high
 
 ### 1. Launch the Live Streamlit Dashboard
 ```powershell
-streamlit run src/smartattend/app.py
+streamlit run src/presencify/app.py
 ```
 Opens interactive dashboard on `http://localhost:8501` featuring:
 - **Live Attendance:** Real-time webcam check-in with session deduplication.
@@ -54,7 +54,7 @@ python scripts/webcam_test.py --headless
 
 Evaluated under an open-set identification protocol across **41 subjects (410 captures)** with capture-disjoint genuine probes and identity-disjoint impostor cohorts across gallery ($M=20$), validation ($N=100$), and held-out test ($N=166$) splits:
 
-| Metric | Method A: Recognition-Only ($\tau = 0.65$) | Method B: Stage 1 (Automated) | Method B: Stage 2 (Post-Review) | Impact of SmartAttend Policy |
+| Metric | Method A: Recognition-Only ($\tau = 0.65$) | Method B: Stage 1 (Automated) | Method B: Stage 2 (Post-Review) | Impact of PRESENCIFY Policy |
 |---|---|---|---|---|
 | **True Accepts (ID Match)** | 65 / 100 (65.0%) | 65 / 100 (65.0%) | **77 / 100 (77.0%)** | **+12 genuine students rescued** |
 | **Misidentifications** | 7 / 100 (7.0%) | 7 / 100 (7.0%) | 7 / 100 (7.0%) | Isolated in high-confidence tail |
@@ -102,12 +102,12 @@ Measured on an Intel i3-class dual/quad-core CPU (6 execution threads, PyTorch C
 ## 📂 Repository Structure
 
 ```
-smartattend/
+presencify/
 ├── docs/
 │   ├── PAPER_DRAFT.md            # Complete 16-section academic research paper draft
 │   ├── paper/
-│   │   ├── smartattend_ieee.tex  # Submission-ready IEEE conference LaTeX source
-│   │   └── smartattend.bib       # Verified BibTeX bibliography (2024–2026 literature)
+│   │   ├── presencify_ieee.tex  # Submission-ready IEEE conference LaTeX source
+│   │   └── presencify.bib       # Verified BibTeX bibliography (2024–2026 literature)
 │   ├── IMPLEMENTATION_STATUS.md  # Detailed milestone progress and risk audit
 │   ├── MODEL_CARD.md             # EdgeFace XS model card, license, and input specs
 │   └── SMOKETEST_PLAN.md         # Isolated model CPU verification plan
@@ -128,7 +128,7 @@ smartattend/
 │   ├── demo_pipeline_e2e.py      # End-to-end CLI demonstration
 │   └── experiments/
 │       └── run_controlled_evaluation.py # Controlled evaluation pipeline
-├── src/smartattend/              # Production application package
+├── src/presencify/              # Production application package
 │   ├── app.py                    # Multi-page Streamlit web application
 │   ├── attendance.py             # Session logic, deduplication & consent checks
 │   ├── database.py               # SQLite WAL engine & audit schema
@@ -148,14 +148,14 @@ smartattend/
 
 ## 📖 Citation
 
-If you use or build upon SmartAttend, please cite our research paper:
+If you use or build upon PRESENCIFY, please cite our research paper:
 
 ```bibtex
-@inproceedings{kumar2026smartattend,
+@inproceedings{kumar2026presencify,
   author    = {Mayank Kumar},
-  title     = {SmartAttend: AI-Assisted Classroom Attendance on Resource-Constrained CPU Edge Devices with Confidence-Based Review},
+  title     = {PRESENCIFY: AI-Assisted Classroom Attendance on Resource-Constrained CPU Edge Devices with Confidence-Based Review},
   booktitle = {Proceedings of the International Conference on Edge Biometrics and Applied Vision},
   year      = {2026},
-  url       = {https://github.com/Capetatsu/SmartAttend.git}
+  url       = {https://github.com/Capetatsu/PRESENCIFY.git}
 }
 ```

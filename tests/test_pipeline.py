@@ -24,16 +24,16 @@ import pytest
 # Make src importable
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from smartattend.aligner import align_face_112, preprocess_for_recognition
-from smartattend.database import (
+from presencify.aligner import align_face_112, preprocess_for_recognition
+from presencify.database import (
     AttendanceEvent, AttendanceSession, FaceTemplate, Student,
     get_session_factory, init_db,
 )
-from smartattend.attendance import (
+from presencify.attendance import (
     create_session, end_session, enroll_student, has_accepted_attendance,
     load_enrolled_embeddings, record_attendance, store_template, teacher_review,
 )
-from smartattend.recognizer import FaceRecognizer, MatchResult, MatchStatus
+from presencify.recognizer import FaceRecognizer, MatchResult, MatchStatus
 
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -72,14 +72,14 @@ class TestDetector:
         assert hasattr(mp, "tasks"), "mediapipe.tasks not available"
 
     def test_detector_loads(self):
-        from smartattend.detector import FaceDetector
+        from presencify.detector import FaceDetector
         d = FaceDetector()
         ok = d.load()
         assert ok, f"Detector load failed: {d.status['load_error']}"
         d.close()
 
     def test_detector_returns_list(self):
-        from smartattend.detector import FaceDetector
+        from presencify.detector import FaceDetector
         d = FaceDetector()
         d.load()
         frame = np.full((480, 640, 3), 200, dtype=np.uint8)
@@ -88,7 +88,7 @@ class TestDetector:
         d.close()
 
     def test_blank_image_zero_detections(self):
-        from smartattend.detector import FaceDetector
+        from presencify.detector import FaceDetector
         d = FaceDetector()
         d.load()
         blank = np.full((480, 640, 3), 180, dtype=np.uint8)
@@ -97,7 +97,7 @@ class TestDetector:
         d.close()
 
     def test_status_dict_has_required_keys(self):
-        from smartattend.detector import FaceDetector
+        from presencify.detector import FaceDetector
         d = FaceDetector()
         d.load()
         s = d.status
@@ -108,7 +108,7 @@ class TestDetector:
     def test_detector_latency_under_500ms(self):
         """Smoke test: ensure latency < 500 ms on CPU."""
         import time
-        from smartattend.detector import FaceDetector
+        from presencify.detector import FaceDetector
         d = FaceDetector()
         d.load()
         frame = synthetic_face_bgr(480)
@@ -290,7 +290,7 @@ class TestDatabase:
         enrolled = {student.id: (student.display_name, emb.copy())}
 
         # First PRESENT
-        from smartattend.recognizer import MatchResult, MatchStatus
+        from presencify.recognizer import MatchResult, MatchStatus
         match1 = MatchResult(
             status=MatchStatus.PRESENT,
             student_id=student.id,
@@ -322,7 +322,7 @@ class TestDatabase:
         sess = create_session(db, "HAA session")
         assert not has_accepted_attendance(db, student.id, sess.id)
 
-        from smartattend.recognizer import MatchResult, MatchStatus
+        from presencify.recognizer import MatchResult, MatchStatus
         match = MatchResult(
             status=MatchStatus.PRESENT, student_id=student.id,
             student_name="Dave", similarity=0.9,
@@ -332,11 +332,11 @@ class TestDatabase:
         assert has_accepted_attendance(db, student.id, sess.id)
 
     def test_teacher_review_creates_audit_record(self, db):
-        from smartattend.database import ReviewEvent
+        from presencify.database import ReviewEvent
         student = enroll_student(db, "Eve", "P005", consent=True)
         sess = create_session(db, "Review session")
 
-        from smartattend.recognizer import MatchResult, MatchStatus
+        from presencify.recognizer import MatchResult, MatchStatus
         match = MatchResult(
             status=MatchStatus.REVIEW_REQUIRED, student_id=student.id,
             student_name="Eve", similarity=0.35,
@@ -356,7 +356,7 @@ class TestDatabase:
         Unknown identity must not be silently assigned to the nearest enrolled
         person when similarity is below threshold.
         """
-        from smartattend.recognizer import MatchResult, MatchStatus
+        from presencify.recognizer import MatchResult, MatchStatus
         student = enroll_student(db, "Frank", "P006", consent=True)
         sess = create_session(db, "Unknown test")
 
@@ -378,7 +378,7 @@ class TestAttendanceLogicAndReviewQueue:
     teacher audit trail, confirmed-attendance immutability, and artifact integrity."""
 
     def _make_match(self, status, student_id=None, student_name=None, similarity=0.75):
-        from smartattend.recognizer import MatchResult, MatchStatus
+        from presencify.recognizer import MatchResult, MatchStatus
         return MatchResult(
             status=status,
             student_id=student_id,
@@ -480,7 +480,7 @@ class TestAttendanceLogicAndReviewQueue:
         """Requirement 5: After teacher resolves an event (PRESENT/REJECTED/DISMISSED),
         it must no longer appear in REVIEW_REQUIRED pending results, but the
         ReviewEvent audit record must still exist."""
-        from smartattend.database import ReviewEvent
+        from presencify.database import ReviewEvent
         student = enroll_student(db, "Lena Hopper", "RQ004", consent=True)
         sess = create_session(db, "Audit trail test")
         match = self._make_match(MatchStatus.REVIEW_REQUIRED, student.id, student.display_name, 0.60)
@@ -603,7 +603,7 @@ class TestBugFixesRegression:
 
     def test_format_similarity_safely_handles_all_numeric_and_null_inputs(self):
         """Bug 1: Verify safe formatting without crashing on None, NaN, 0.0, or invalid types."""
-        from smartattend.camera import format_similarity
+        from presencify.camera import format_similarity
         import numpy as np
 
         assert format_similarity(None) == "N/A"
@@ -618,8 +618,8 @@ class TestBugFixesRegression:
 
     def test_review_queue_rendering_simulation_with_none_similarity(self, db):
         """Bug 1: Verify Review Queue formatting logic renders None similarity without crashing."""
-        from smartattend.camera import format_similarity
-        from smartattend.database import AttendanceEvent
+        from presencify.camera import format_similarity
+        from presencify.database import AttendanceEvent
         import numpy as np
 
         sess = create_session(db, "Test Queue None Sim")
@@ -655,7 +655,7 @@ class TestBugFixesRegression:
         The return value is the updated existing record (not None), and DB count stays at 1.
         """
         sess = create_session(db, "Test Unknown Cooldown")
-        from smartattend.recognizer import MatchResult, MatchStatus
+        from presencify.recognizer import MatchResult, MatchStatus
 
         match = MatchResult(
             status=MatchStatus.UNKNOWN,
@@ -689,7 +689,7 @@ class TestBugFixesRegression:
         """Bug 3: Verify REVIEW_REQUIRED items are deduplicated per student per session."""
         student = enroll_student(db, "Grace Hopper", "P007", consent=True)
         sess = create_session(db, "Test Review Dedup")
-        from smartattend.recognizer import MatchResult, MatchStatus
+        from presencify.recognizer import MatchResult, MatchStatus
 
         match = MatchResult(
             status=MatchStatus.REVIEW_REQUIRED,
@@ -712,7 +712,7 @@ class TestBugFixesRegression:
 
     def test_camera_diagnose_structure(self):
         """Bug 2: Verify camera diagnostic routine returns expected schema and keys."""
-        from smartattend.camera import diagnose_camera
+        from presencify.camera import diagnose_camera
         diag = diagnose_camera(0)
         assert "device_index" in diag
         assert "is_accessible" in diag
@@ -723,7 +723,7 @@ class TestBugFixesRegression:
 
     def test_camera_open_invalid_index_returns_none_safely(self):
         """Bug 2: Verify camera opener handles nonexistent camera index gracefully without raising."""
-        from smartattend.camera import open_camera
+        from presencify.camera import open_camera
         cap, backend, err = open_camera(index=99)
         assert cap is None
         assert backend == ""
@@ -731,13 +731,13 @@ class TestBugFixesRegression:
         assert "99" in err
 
     def test_review_queue_renders_actual_historical_db_records(self):
-        """Bug 1 & 3: Query real smartattend.db (which contains historic UNKNOWN records) and verify safe formatting."""
-        from smartattend.camera import format_similarity
-        from smartattend.database import get_session_factory, AttendanceEvent
+        """Bug 1 & 3: Query real presencify.db (which contains historic UNKNOWN records) and verify safe formatting."""
+        from presencify.camera import format_similarity
+        from presencify.database import get_session_factory, AttendanceEvent
         from pathlib import Path
         import sqlite3
 
-        db_path = Path(__file__).parents[1] / "smartattend.db"
+        db_path = Path(__file__).parents[1] / "presencify.db"
         if not db_path.exists():
             return  # skip if running in environment without local db
 

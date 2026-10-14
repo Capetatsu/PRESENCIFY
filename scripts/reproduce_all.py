@@ -1,5 +1,5 @@
 """
-Master Reproducibility Script for SmartAttend.
+Master Reproducibility Script for PRESENCIFY.
 Executes the full automated pipeline:
 1. Environment & Hardware Check (Intel i3 / CPU-only)
 2. Unit & Integration Test Suite (pytest, 38 tests)
@@ -178,8 +178,8 @@ def step_4_verify_integrity() -> bool:
 
 
 def main() -> int:
-    print_header("SmartAttend Master Reproducibility & Integrity Runner")
-    print("Project : SmartAttend (Local-First AI Classroom Attendance)")
+    print_header("PRESENCIFY Master Reproducibility & Integrity Runner")
+    print("Project : PRESENCIFY (Local-First AI Classroom Attendance)")
     print("Target  : Windows x86_64, Intel i3-class CPU, 8 GB RAM")
     print("Date    : 14 October 2026")
 
@@ -196,7 +196,7 @@ def main() -> int:
         return 1
 
     print_header("ALL REPRODUCIBILITY CHECKS PASSED")
-    print("The entire SmartAttend pipeline, test suite, and experimental results")
+    print("The entire PRESENCIFY pipeline, test suite, and experimental results")
     print("have been strictly reproduced and verified with complete integrity.")
     print("Ready for submission before 15 October 2026.\n")
     return 0

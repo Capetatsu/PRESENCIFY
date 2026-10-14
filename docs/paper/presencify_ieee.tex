@@ -16,7 +16,7 @@
 
 \begin{document}
 
-\title{SmartAttend: AI-Assisted Classroom Attendance on Resource-Constrained CPU Edge Devices with Confidence-Based Review}
+\title{PRESENCIFY: AI-Assisted Classroom Attendance on Resource-Constrained CPU Edge Devices with Confidence-Based Review}
 
 \author{\IEEEauthorblockN{Mayank Kumar}
 \IEEEauthorblockA{\textit{Department of Computer Science \& Engineering} \\
@@ -26,7 +26,7 @@ Email: capetatsu@example.org}
 \maketitle
 
 \begin{abstract}
-Automating classroom attendance using computer vision offers substantial operational efficiency but introduces severe vulnerabilities on edge hardware: high false-rejection rates under unconstrained indoor lighting and pose variations, proxy attendance from unverified matches, and excessive computational demands that overwhelm commodity classroom laptops. In this paper, we present SmartAttend, a privacy-conscious, local-first research prototype designed specifically for commodity x86 laptop hardware lacking dedicated graphics processing units (GPUs). SmartAttend couples a lightweight edge face detector (MediaPipe BlazeFace, executing in 3.5~ms) with a compact hybrid CNN-Transformer recognition backbone (EdgeFace XS, forward pass executing in 15.3~ms on an Intel i3 CPU). Rather than enforcing brittle hard-threshold decision boundaries, SmartAttend implements a dual-threshold confidence-based review policy that automatically accepts high-confidence identities ($\ge 0.65$), rejects low-similarity strangers ($< 0.52$), and routes ambiguous matches ($0.52 \le \text{similarity} < 0.65$) to an audited teacher review queue. Evaluated on a controlled open-set protocol across 41 subjects (410 captures) with strictly separated gallery, validation, and held-out test splits, our confidence review policy rescues genuine students from false absence, cutting false rejections from 35.0\% down to 16.0\%, increasing identity-specific identification recall from 65.0\% to 77.0\%, and elevating identity F1-score from 0.684 to 0.762 (binary attendance F1-score from 0.758 to 0.832) compared with a standard recognition-only baseline, requiring human intervention on 33.7\% of borderline cases (56/166). We provide full hardware latency logs, an empirical audit of recent 2024--2026 biometric literature, and an honest disclosure of presentation-attack detection unavailability.
+Automating classroom attendance using computer vision offers substantial operational efficiency but introduces severe vulnerabilities on edge hardware: high false-rejection rates under unconstrained indoor lighting and pose variations, proxy attendance from unverified matches, and excessive computational demands that overwhelm commodity classroom laptops. In this paper, we present PRESENCIFY, a privacy-conscious, local-first research prototype designed specifically for commodity x86 laptop hardware lacking dedicated graphics processing units (GPUs). PRESENCIFY couples a lightweight edge face detector (MediaPipe BlazeFace, executing in 3.5~ms) with a compact hybrid CNN-Transformer recognition backbone (EdgeFace XS, forward pass executing in 15.3~ms on an Intel i3 CPU). Rather than enforcing brittle hard-threshold decision boundaries, PRESENCIFY implements a dual-threshold confidence-based review policy that automatically accepts high-confidence identities ($\ge 0.65$), rejects low-similarity strangers ($< 0.52$), and routes ambiguous matches ($0.52 \le \text{similarity} < 0.65$) to an audited teacher review queue. Evaluated on a controlled open-set protocol across 41 subjects (410 captures) with strictly separated gallery, validation, and held-out test splits, our confidence review policy rescues genuine students from false absence, cutting false rejections from 35.0\% down to 16.0\%, increasing identity-specific identification recall from 65.0\% to 77.0\%, and elevating identity F1-score from 0.684 to 0.762 (binary attendance F1-score from 0.758 to 0.832) compared with a standard recognition-only baseline, requiring human intervention on 33.7\% of borderline cases (56/166). We provide full hardware latency logs, an empirical audit of recent 2024--2026 biometric literature, and an honest disclosure of presentation-attack detection unavailability.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -43,7 +43,7 @@ An alternative paradigm is a localized, workstation-based check-in kiosk: a stan
     \item \textbf{Biometric Security and Privacy Risks:} Biometric data should not be transmitted to third-party cloud services without consent, and raw facial templates are susceptible to inversion attacks if unmanaged \cite{sun2025privacy}. Furthermore, claiming spoof resilience without a verified, runnable presentation-attack detection (PAD) model misleads educators and institutions.
 \end{enumerate}
 
-To address these challenges, we introduce \textbf{SmartAttend}, an evidence-backed local research prototype. SmartAttend pairs an ultra-fast CPU face detector with the compact EdgeFace XS recognition model \cite{george2024edgeface}, operating within a $\sim$31~ms total computational latency budget per frame. Central to our system is a \textbf{confidence-based review policy}: ambiguous matches that fall within an empirically calibrated uncertainty band are neither accepted nor discarded blindly; instead, they are held in an audited SQLite review queue for instructor verification.
+To address these challenges, we introduce \textbf{PRESENCIFY}, an evidence-backed local research prototype. PRESENCIFY pairs an ultra-fast CPU face detector with the compact EdgeFace XS recognition model \cite{george2024edgeface}, operating within a $\sim$31~ms total computational latency budget per frame. Central to our system is a \textbf{confidence-based review policy}: ambiguous matches that fall within an empirically calibrated uncertainty band are neither accepted nor discarded blindly; instead, they are held in an audited SQLite review queue for instructor verification.
 
 \section{Related Work (2024--2026 Literature)}
 
@@ -57,7 +57,7 @@ Patel et al. (2025) \cite{patel2025cctv} demonstrated automated attendance loggi
 Biometric systems in unattended or semi-attended kiosks are vulnerable to presentation attacks, including printed photos and screen replays. Systematic literature reviews by Shaheed et al. (2024) \cite{shaheed2024deep} and Pooshideh et al. (2025) \cite{pooshideh2025pad} categorize the evolution of physical attack detection, demonstrating that heuristic liveness checks (e.g., prompting users to blink or turn their head) are easily bypassed and do not constitute validated PAD. Recent deep-learning models seek single-frame lightweight execution: Khan (2026) \cite{khan2026casopad} proposed \textbf{CASO-PAD}, incorporating content-adaptive spatial involution operators into MobileNetV3 to detect localized spoofing cues. Khan et al. (2025) \cite{khan2025spatiotemporal} explored spatio-temporal modeling over multi-frame sequences. As documented in our model audit, runnable pretrained checkpoints for these candidates remain largely unreleased, necessitating truthful disclosure when PAD is inactive.
 
 \subsection{Privacy-Preserving Biometrics}
-Sun and Liu (2025) \cite{sun2025privacy} provided a systematic survey on biometric privacy across data generation, inference, and storage. Their findings emphasize that biometric embeddings cannot be treated as anonymous hashes, as model inversion algorithms can reconstruct facial approximations from 512-dimensional feature vectors. Their recommendations---enforcing local storage, cryptographic isolation, affirmative student consent, and supporting full template deletion---directly ground SmartAttend's data architecture \cite{zhou2024privacy, chen2025leakages}.
+Sun and Liu (2025) \cite{sun2025privacy} provided a systematic survey on biometric privacy across data generation, inference, and storage. Their findings emphasize that biometric embeddings cannot be treated as anonymous hashes, as model inversion algorithms can reconstruct facial approximations from 512-dimensional feature vectors. Their recommendations---enforcing local storage, cryptographic isolation, affirmative student consent, and supporting full template deletion---directly ground PRESENCIFY's data architecture \cite{zhou2024privacy, chen2025leakages}.
 
 \section{System Architecture \& Methodology}
 
@@ -92,7 +92,7 @@ Let $\mathcal{G} = \{(\text{id}_i, \mathbf{e}_i)\}_{i=1}^M$ be the enrolled gall
 
 \section{Model Selection \& Reproducibility Audit}
 \label{sec:audit}
-A core rule of SmartAttend is the strict verification of code and checkpoint availability before selecting a model:
+A core rule of PRESENCIFY is the strict verification of code and checkpoint availability before selecting a model:
 \begin{itemize}
     \item \textbf{EdgeFace XS (IEEE TBIOM 2024 \cite{george2024edgeface}):} 7.17~MB checkpoint verified; 26.6~ms CPU latency; CC BY-NC-SA 4.0 license. \textit{Selected and integrated.}
     \item \textbf{FaceLiVT (IEEE ICIP 2025 \cite{setyawan2025facelivt}):} 0 GitHub releases; official README explicitly notes ``TODO: Add download links''. \textit{Weights unreleased; abandoned.}
@@ -103,7 +103,7 @@ A core rule of SmartAttend is the strict verification of code and checkpoint ava
 \section{Experimental Evaluation}
 
 \subsection{Protocol \& Split Accounting}
-We evaluated SmartAttend on an open-set identification protocol using authentic photographic captures across 41 subjects (410 captures total):
+We evaluated PRESENCIFY on an open-set identification protocol using authentic photographic captures across 41 subjects (410 captures total):
 \begin{itemize}
     \item \textbf{Cohort Provenance:} 1 consented live participant ($P001$, local developer) and 40 academic benchmark subjects ($P002$--$P041$, AT\&T Cambridge open database).
     \item \textbf{Enrolled Gallery ($M = 20$):} Subjects $P001$ to $P020$. Each has 2 enrollment reference images (40 images total) creating a mean unit template vector.
@@ -165,7 +165,7 @@ Evaluated on an Intel i3 CPU (6 threads, Windows 11, CPython 3.12):
 \section{Discussion \& Impact}
 \textbf{Genuine Student Recovery:} Under Method A ($\tau = 0.65$), natural variations in expression and head orientation reduce genuine cosine similarities into the 0.52--0.64 range, resulting in 28.0\% false absences and 7.0\% misidentifications (35.0\% FRR). Method B captures these probes into \texttt{REVIEW\_REQUIRED}. Following instructor verification, 12 genuine students are correctly credited, raising identity recall from 65.0\% to 77.0\%.
 
-\textbf{Impostor Mitigation:} While 18 high-similarity impostors ($\ge 0.65$) bypassed automated detection, the confidence review policy successfully intercepted \textbf{33 borderline impostors} that scored in $[0.52, 0.65)$. Under a single lower threshold ($\tau = 0.52$), all $18 + 33 = 51$ impostors would have achieved proxy attendance. SmartAttend prevented these 33 impostors from logging attendance without teacher authorization.
+\textbf{Impostor Mitigation:} While 18 high-similarity impostors ($\ge 0.65$) bypassed automated detection, the confidence review policy successfully intercepted \textbf{33 borderline impostors} that scored in $[0.52, 0.65)$. Under a single lower threshold ($\tau = 0.52$), all $18 + 33 = 51$ impostors would have achieved proxy attendance. PRESENCIFY prevented these 33 impostors from logging attendance without teacher authorization.
 
 \section{Limitations \& Ethics}
 \begin{enumerate}
@@ -175,9 +175,9 @@ Evaluated on an Intel i3 CPU (6 threads, Windows 11, CPython 3.12):
 \end{enumerate}
 
 \section{Conclusion}
-SmartAttend proves that reliable, privacy-conscious classroom attendance is achievable on commodity CPU laptops without GPU acceleration. Coupling BlazeFace with EdgeFace XS achieves $\sim$19.6~ms total frame latency ($\sim$51.0 FPS). Our dual-threshold review policy rescues 12 genuine students from false absence, cuts false rejections from 35.0\% to 16.0\%, halts 33 borderline impostors, and elevates identification F1-score from 0.684 to 0.762.
+PRESENCIFY proves that reliable, privacy-conscious classroom attendance is achievable on commodity CPU laptops without GPU acceleration. Coupling BlazeFace with EdgeFace XS achieves $\sim$19.6~ms total frame latency ($\sim$51.0 FPS). Our dual-threshold review policy rescues 12 genuine students from false absence, cuts false rejections from 35.0\% to 16.0\%, halts 33 borderline impostors, and elevates identification F1-score from 0.684 to 0.762.
 
 \bibliographystyle{IEEEtran}
-\bibliography{smartattend}
+\bibliography{presencify}
 
 \end{document}

@@ -51,7 +51,7 @@ class FaceDetection:
 
 class FaceDetector:
     """
-    MediaPipe BlazeFace detector wrapped for SmartAttend.
+    MediaPipe BlazeFace detector wrapped for PRESENCIFY.
 
     Disclosed: engineering fallback, not a peer-reviewed research model.
     Model file must be present at model_path before calling load().

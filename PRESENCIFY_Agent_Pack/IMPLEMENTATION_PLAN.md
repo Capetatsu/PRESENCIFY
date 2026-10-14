@@ -1,4 +1,4 @@
-# SmartAttend --- Implementation Plan
+# PRESENCIFY --- Implementation Plan
 
 ## Phase 0: inspect repository
 

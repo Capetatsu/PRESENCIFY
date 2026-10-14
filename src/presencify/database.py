@@ -1,5 +1,5 @@
 """
-database.py – SQLite persistence for SmartAttend (Phase 4/6).
+database.py – SQLite persistence for PRESENCIFY (Phase 4/6).
 
 Tables:
   students          – enrolled students (pseudonymous IDs)
@@ -29,7 +29,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
 
-DB_PATH = Path(__file__).parents[2] / "smartattend.db"
+DB_PATH = Path(__file__).parents[2] / "presencify.db"
 
 
 def _now() -> datetime:

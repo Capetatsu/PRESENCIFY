@@ -17,13 +17,13 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from smartattend.attendance import create_session, enroll_student, record_attendance
-from smartattend.database import get_session_factory, init_db
-from smartattend.export import (
+from presencify.attendance import create_session, enroll_student, record_attendance
+from presencify.database import get_session_factory, init_db
+from presencify.export import (
     EXPERIMENTS_DIR, export_environment, export_model_manifest,
     export_predictions, export_summary,
 )
-from smartattend.recognizer import MatchResult, MatchStatus
+from presencify.recognizer import MatchResult, MatchStatus
 
 
 @pytest.fixture

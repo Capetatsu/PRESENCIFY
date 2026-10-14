@@ -1,4 +1,4 @@
-# SmartAttend – Experimental Evaluation Protocol (Audit Verified)
+# PRESENCIFY – Experimental Evaluation Protocol (Audit Verified)
 
 **Date:** October 2026  
 **Document:** `experiments/test_protocol.md`  
@@ -8,7 +8,7 @@
 
 ## 1. Objective and Hypothesis
 
-The evaluation rigorously tests the primary research hypothesis of SmartAttend:
+The evaluation rigorously tests the primary research hypothesis of PRESENCIFY:
 > **Hypothesis ($H_1$):** On a CPU-based webcam prototype, introducing a confidence-based review policy (routing borderline cosine similarity scores in $[0.52, 0.65)$ to an audited review queue) significantly reduces false absences and mitigates proxy attendance risks compared with a hard-threshold recognition-only baseline, at the cost of a measurable human review workload.
 
 ---
@@ -47,7 +47,7 @@ To prevent image leakage and threshold overfitting, partitions enforce capture-d
 - If $\max_i \cos(\mathbf{e}_q, \mathbf{e}_i) \ge \tau_{\text{accept}}$ ($0.65$): Decision = $\arg\max_i$ (`PRESENT`).
 - If $< 0.65$: Decision = `UNKNOWN`.
 
-### Method B: SmartAttend Confidence-Based Review Policy
+### Method B: PRESENCIFY Confidence-Based Review Policy
 - **Stage 1 (Automated):**
   - If $\ge 0.65$: Auto-Accepted as `PRESENT`.
   - If $0.52 \le s < 0.65$: Routed to `REVIEW_REQUIRED` (queued for instructor audit).
@@ -78,7 +78,7 @@ To prevent image leakage and threshold overfitting, partitions enforce capture-d
 
 ## 6. Audit-Verified Experimental Results (166 Held-Out Test Probes)
 
-| Metric | Method A: Recognition-Only ($\tau = 0.65$) | Method B: Stage 1 (Automated) | Method B: Stage 2 (Post-Review) | Impact of SmartAttend Policy |
+| Metric | Method A: Recognition-Only ($\tau = 0.65$) | Method B: Stage 1 (Automated) | Method B: Stage 2 (Post-Review) | Impact of PRESENCIFY Policy |
 |---|---|---|---|---|
 | **True Accepts (Identity Match)** | 65 / 100 (65.0%) | 65 / 100 (65.0%) | **77 / 100 (77.0%)** | **+12 genuine students rescued** |
 | **Misidentifications** | 7 / 100 (7.0%) | 7 / 100 (7.0%) | 7 / 100 (7.0%) | High-similarity errors isolated |

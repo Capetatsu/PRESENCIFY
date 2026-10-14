@@ -1,8 +1,8 @@
-# SmartAttend – Implementation Status
+# PRESENCIFY – Implementation Status
 
 **Last updated:** 2026-10-14  
 **Machine:** Windows 11, Intel i3-class CPU, 8 GB RAM, Intel UHD Graphics, no CUDA/NVIDIA GPU, Python 3.12.1  
-**Repository:** https://github.com/Capetatsu/SmartAttend.git (branch `main`)
+**Repository:** https://github.com/Capetatsu/PRESENCIFY.git (branch `main`)
 
 ---
 
@@ -81,7 +81,7 @@
 - [x] 38/38 unit and integration tests passing (`pytest tests/ -v`).
 
 ### [x] Phase 7: Streamlit Dashboard
-- [x] Created `src/smartattend/app.py` with 6 interactive pages:
+- [x] Created `src/presencify/app.py` with 6 interactive pages:
   - Live Attendance (real-time webcam overlay with bounding boxes, similarity scores, and PAD banner)
   - Enroll Student (with consent confirmation and face template capture)
   - Review Queue (audited teacher resolution of uncertain matches)
@@ -90,7 +90,7 @@
   - Diagnostics (real-time hardware, versions, latency, and model card inspection)
 
 ### [x] Phase 8: Pseudonymous Exports & Manifests
-- [x] Created `src/smartattend/export.py`:
+- [x] Created `src/presencify/export.py`:
   - `predictions_anonymized.csv`: exports pseudonyms (e.g. P001), similarity scores, and decisions without personal display names.
   - `attendance_summary.csv`: per-session aggregate metrics.
   - `environment.txt` & `model_manifest.json`: reproducibility manifests.
@@ -107,7 +107,7 @@
 
 ### [x] Phase 10: Research Paper & Master Reproduction
 - [x] Drafted complete 16-section research paper: `docs/PAPER_DRAFT.md`.
-- [x] Formatted IEEEtran two-column LaTeX submission package: `docs/paper/smartattend_ieee.tex` and `docs/paper/smartattend.bib`.
+- [x] Formatted IEEEtran two-column LaTeX submission package: `docs/paper/presencify_ieee.tex` and `docs/paper/presencify.bib`.
 - [x] Authored one-line master reproduction script: `scripts/reproduce_all.py`.
 
 ---
@@ -119,5 +119,5 @@
 | Master Reproduction | `python scripts/reproduce_all.py` | ✅ All 4 steps pass with zero defects |
 | Test Suite | `python -m pytest tests/ -v` | ✅ 38/38 passing (100%) |
 | Controlled Evaluation | `python scripts/experiments/run_controlled_evaluation.py` | ✅ 166 probes evaluated, plots generated |
-| Live Dashboard | `streamlit run src/smartattend/app.py` | ✅ HTTP 200 on port 8501, 6 pages operational |
+| Live Dashboard | `streamlit run src/presencify/app.py` | ✅ HTTP 200 on port 8501, 6 pages operational |
 | Webcam Smoke Test | `python scripts/webcam_test.py --headless` | ✅ DirectShow capture verified |
