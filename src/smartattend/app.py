@@ -201,6 +201,13 @@ if page == "📷 Live Attendance":
                 ).all()
                 already_present = {e.student_id for e in accepted if e.student_id}
 
+            # Temporal consistency state: require N_CONSISTENT consecutive frames
+            # with the same student identity before persisting a PRESENT event.
+            # This prevents a single transient frame from triggering attendance.
+            N_CONSISTENT = 3   # configurable; do not tune against the test set
+            _consec_student_id: Optional[str] = None
+            _consec_count: int = 0
+
             try:
                 while run_live:
                     ret, frame = read_frame_with_retry(cap, max_retries=3, delay_sec=0.03)
@@ -239,25 +246,62 @@ if page == "📷 Live Attendance":
                         else:
                             match = recognizer.match(embedding, enrolled)
 
-                            # Record to DB (non-duplicate, non-spam — frame_idx gated + 30s cooldown for UNKNOWN)
-                            if frame_idx % 10 == 0:  # evaluate persistence every ~10 frames
-                                with get_db()() as db:
-                                    evt = record_attendance(
-                                        db, active_session_id, match,
-                                        frame_index=frame_idx,
-                                        pad_status="PAD_UNAVAILABLE",
-                                        cooldown_seconds=30,
-                                    )
-                                if (match.status == MatchStatus.PRESENT and
-                                        match.student_id and
-                                        match.student_id not in already_present):
-                                    already_present.add(match.student_id)
+                            # ── Temporal consistency guard ────────────────────────
+                            # Only persist a PRESENT decision after N_CONSISTENT
+                            # consecutive frames agree on the same student identity.
+                            # Protects against single-frame transient matches.
+                            # REVIEW_REQUIRED and UNKNOWN are persisted per-frame gate
+                            # (deduplicated in record_attendance).
+                            if match.status == MatchStatus.PRESENT and match.student_id:
+                                if match.student_id not in already_present:
+                                    # Accumulate consistent-identity evidence
+                                    if match.student_id == _consec_student_id:
+                                        _consec_count += 1
+                                    else:
+                                        _consec_student_id = match.student_id
+                                        _consec_count = 1
+
+                                    if _consec_count >= N_CONSISTENT:
+                                        # Sufficient evidence — persist attendance
+                                        with get_db()() as db:
+                                            evt = record_attendance(
+                                                db, active_session_id, match,
+                                                frame_index=frame_idx,
+                                                pad_status="PAD_UNAVAILABLE",
+                                            )
+                                        if evt is not None:
+                                            already_present.add(match.student_id)
+                                        # Reset consistency counter after decision
+                                        _consec_student_id = None
+                                        _consec_count = 0
+                                    # else: still accumulating — do not persist yet
+                                # else: already confirmed in this session — skip
+                            else:
+                                # Reset consistency counter if identity changes or non-PRESENT
+                                if match.status != MatchStatus.PRESENT:
+                                    _consec_student_id = None
+                                    _consec_count = 0
+
+                                # Persist REVIEW_REQUIRED and UNKNOWN (deduplicated internally)
+                                if frame_idx % 10 == 0:
+                                    with get_db()() as db:
+                                        record_attendance(
+                                            db, active_session_id, match,
+                                            frame_index=frame_idx,
+                                            pad_status="PAD_UNAVAILABLE",
+                                        )
 
                             # Build overlay label
                             sim_str = format_similarity(match.similarity, 2, "—")
                             label = f"{match.status.value} | sim={sim_str} | PAD:UNAVAIL"
                             if match.student_name:
                                 label = f"{match.student_name} | {label}"
+
+                            # Overlay note when still accumulating consistent frames
+                            if (match.status == MatchStatus.PRESENT and
+                                    match.student_id not in already_present and
+                                    _consec_count > 0 and _consec_count < N_CONSISTENT):
+                                label += f" | confirming {_consec_count}/{N_CONSISTENT}"
 
                             color = {
                                 MatchStatus.PRESENT:         (0, 200, 0),
@@ -292,6 +336,7 @@ if page == "📷 Live Attendance":
 
             finally:
                 release_camera(cap)
+
 
     elif not run_live:
         frame_placeholder.info("Toggle 'Run webcam' to start.")
@@ -404,64 +449,109 @@ elif page == "➕ Enroll Student":
 # ═══════════════════════════════════════════════════════════════════════════════
 elif page == "🔍 Review Queue":
     st.title("🔍 Teacher Review Queue")
-    st.caption("Review uncertain or flagged attendance decisions. All corrections are audited.")
+    st.caption(
+        "Review borderline-confidence matches flagged by the model. "
+        "All teacher decisions are recorded in the audit log. "
+        "Camera observations of unknown faces are NOT shown here — "
+        "they are raw observations and do not imply any student is absent or present."
+    )
 
+    # Session selector — show only items from the chosen session
     with get_db()() as db:
-        pending = db.query(AttendanceEvent).filter(
-            AttendanceEvent.status.in_(["REVIEW_REQUIRED", "UNKNOWN"])
-        ).filter_by(is_accepted=False).order_by(AttendanceEvent.recorded_at.desc()).limit(50).all()
+        all_sessions = db.query(AttendanceSession).order_by(
+            AttendanceSession.started_at.desc()
+        ).all()
+        session_map = {f"{s.name} ({'Active' if s.is_active else 'Ended'})": s.id for s in all_sessions}
 
-        students = {s.id: s for s in db.query(Student).all()}
-
-    if not pending:
-        st.info("No pending review items.")
+    if not session_map:
+        st.info("No sessions found. Start a session in Live Attendance first.")
     else:
-        for evt in pending:
-            student = students.get(evt.student_id)
-            sim_display = format_similarity(evt.similarity_score, 3, "N/A")
-            with st.expander(
-                f"[{evt.status}] Event #{evt.id} — "
-                f"{student.pseudonym if student else 'UNKNOWN'} — "
-                f"sim={sim_display}"
-            ):
-                sim_val = (
-                    round(float(evt.similarity_score), 4)
-                    if (evt.similarity_score is not None and not np.isnan(float(evt.similarity_score)))
-                    else None
-                )
-                thresh_val = (
-                    round(float(evt.similarity_threshold), 4)
-                    if (evt.similarity_threshold is not None and not np.isnan(float(evt.similarity_threshold)))
-                    else None
-                )
-                st.json({
-                    "event_id": evt.id,
-                    "status": evt.status,
-                    "student": student.pseudonym if student else None,
-                    "similarity_score": sim_val,
-                    "similarity_threshold": thresh_val,
-                    "pad_status": evt.pad_status,
-                    "recorded_at": str(evt.recorded_at),
-                })
-                col1, col2, col3 = st.columns(3)
-                reason = st.text_input("Reason", key=f"reason_{evt.id}")
-                with col1:
-                    if st.button("✅ Mark PRESENT", key=f"pres_{evt.id}"):
-                        with get_db()() as db:
-                            teacher_review(db, evt.id, "PRESENT", reason or "manual review")
-                        st.success("Marked PRESENT.")
-                        st.rerun()
-                with col2:
-                    if st.button("❌ Mark REJECTED", key=f"rej_{evt.id}"):
-                        with get_db()() as db:
-                            teacher_review(db, evt.id, "REJECTED", reason or "manual review")
-                        st.success("Marked REJECTED.")
-                        st.rerun()
-                with col3:
-                    if st.button("🔕 Dismiss", key=f"dis_{evt.id}"):
-                        with get_db()() as db:
-                            teacher_review(db, evt.id, "DISMISSED", reason or "dismissed")
-                        st.rerun()
+        chosen_session_label = st.selectbox(
+            "Session to review", list(session_map.keys()), index=0
+        )
+        review_session_id = session_map[chosen_session_label]
+
+        with get_db()() as db:
+            # Only REVIEW_REQUIRED — resolved items (PRESENT/REJECTED/DISMISSED)
+            # have had their status updated by teacher_review() and are excluded.
+            pending = db.query(AttendanceEvent).filter(
+                AttendanceEvent.status == "REVIEW_REQUIRED",
+                AttendanceEvent.session_id == review_session_id,
+                AttendanceEvent.is_accepted == False,
+            ).order_by(AttendanceEvent.recorded_at.desc()).all()
+
+            students = {s.id: s for s in db.query(Student).all()}
+
+        if not pending:
+            st.success("✅ No pending review items for this session.")
+        else:
+            st.info(f"{len(pending)} item(s) pending teacher review.")
+            for evt in pending:
+                student = students.get(evt.student_id) if evt.student_id else None
+                sim_display = format_similarity(evt.similarity_score, 3, "N/A")
+                label_name = student.pseudonym if student else "UNKNOWN_PERSON"
+                with st.expander(
+                    f"[{evt.status}] Event #{evt.id} — "
+                    f"{label_name} — "
+                    f"sim={sim_display}"
+                ):
+                    sim_val = (
+                        round(float(evt.similarity_score), 4)
+                        if (evt.similarity_score is not None and not np.isnan(float(evt.similarity_score)))
+                        else None
+                    )
+                    thresh_val = (
+                        round(float(evt.similarity_threshold), 4)
+                        if (evt.similarity_threshold is not None and not np.isnan(float(evt.similarity_threshold)))
+                        else None
+                    )
+                    st.json({
+                        "event_id": evt.id,
+                        "status": evt.status,
+                        "candidate_student": student.pseudonym if student else None,
+                        "similarity_score": sim_val,
+                        "similarity_threshold": thresh_val,
+                        "review_range": f"[{thresh_val}, {thresh_val and round(thresh_val + 0.13, 2)})" if thresh_val else "N/A",
+                        "pad_status": evt.pad_status,
+                        "recorded_at": str(evt.recorded_at),
+                        "note": (
+                            "This face matched candidate student with borderline confidence. "
+                            "Confirm or reject based on in-person verification."
+                            if student else
+                            "No candidate student matched. "
+                            "Camera observation alone does not imply any student is absent."
+                        ),
+                    })
+
+                    # Prevent PRESENT from being assigned to an UNKNOWN_PERSON case
+                    can_mark_present = (student is not None)
+                    if not can_mark_present:
+                        st.warning(
+                            "No enrolled student identity was linked to this event. "
+                            "PRESENT cannot be assigned — dismiss or reject."
+                        )
+
+                    col1, col2, col3 = st.columns(3)
+                    reason = st.text_input("Reason (optional)", key=f"reason_{evt.id}")
+                    with col1:
+                        if can_mark_present:
+                            if st.button("✅ Mark PRESENT", key=f"pres_{evt.id}"):
+                                with get_db()() as db:
+                                    teacher_review(db, evt.id, "PRESENT", reason or "verified by teacher")
+                                st.success(f"Marked PRESENT for {student.pseudonym}.")
+                                st.rerun()
+                    with col2:
+                        if st.button("❌ Mark REJECTED", key=f"rej_{evt.id}"):
+                            with get_db()() as db:
+                                teacher_review(db, evt.id, "REJECTED", reason or "rejected by teacher")
+                            st.success("Marked REJECTED.")
+                            st.rerun()
+                    with col3:
+                        if st.button("🔕 Dismiss", key=f"dis_{evt.id}"):
+                            with get_db()() as db:
+                                teacher_review(db, evt.id, "DISMISSED", reason or "dismissed by teacher")
+                            st.rerun()
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

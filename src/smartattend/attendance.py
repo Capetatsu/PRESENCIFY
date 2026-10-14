@@ -31,20 +31,25 @@ def record_attendance(
     match: MatchResult,
     frame_index: Optional[int] = None,
     pad_status: str = PAD_UNAVAILABLE,
-    cooldown_seconds: Optional[int] = 30,
+    cooldown_seconds: Optional[int] = 30,  # kept for API compatibility; no longer used
 ) -> Optional[AttendanceEvent]:
     """
-    Persist one attendance decision. Enforces duplicate prevention and rate limiting.
+    Persist one attendance decision. Enforces duplicate prevention.
 
-    Returns the AttendanceEvent row, or None if blocked by duplicate/cooldown rules.
+    Returns the AttendanceEvent row, or None if blocked by duplicate rules.
 
     Rules:
-      - PRESENT: allowed only if no accepted record exists for student/session.
-      - REVIEW_REQUIRED: allowed once per student per session to avoid review queue flooding.
-      - UNKNOWN: rate-limited by cooldown_seconds per session to avoid spamming failure logs.
+      - PRESENT: allowed only once per student per session (is_accepted=True).
+      - REVIEW_REQUIRED: queued once per student per session; ignored on repeat frames.
+      - UNKNOWN: upserted — exactly one record per session is maintained; repeated
+        observations update frame_index and timestamp in place (no new rows inserted).
       - MODEL_ERROR: stored for audit.
+
+    Note: An UNKNOWN observation never implies student absence and does not assign
+    any student identity. It records only that an unrecognised face was seen.
     """
     status = match.status.value
+
 
     # 1. Duplicate check (PRESENT only once per student per session)
     if status == MatchStatus.PRESENT.value and match.student_id:
@@ -61,19 +66,21 @@ def record_attendance(
         if existing_review:
             return None  # already queued for teacher review in this session
 
-    # 3. Rate-limiting for UNKNOWN events (avoid creating 60 records/min on continuous un-enrolled presence)
-    if status == MatchStatus.UNKNOWN.value and cooldown_seconds is not None and cooldown_seconds > 0:
-        recent_unknown = db.query(AttendanceEvent).filter_by(
+    # 3. UNKNOWN events: upsert — update existing observation record in place rather
+    #    than inserting a new row per cooldown cycle. This keeps exactly one UNKNOWN
+    #    record per session (updated timestamp + frame count), preventing queue growth.
+    if status == MatchStatus.UNKNOWN.value:
+        existing_unknown = db.query(AttendanceEvent).filter_by(
             session_id=session_id,
             status=MatchStatus.UNKNOWN.value,
         ).order_by(AttendanceEvent.recorded_at.desc()).first()
-        if recent_unknown and recent_unknown.recorded_at:
-            now_utc = datetime.now(timezone.utc)
-            rec = recent_unknown.recorded_at
-            if rec.tzinfo is None:
-                rec = rec.replace(tzinfo=timezone.utc)
-            if (now_utc - rec).total_seconds() < cooldown_seconds:
-                return None  # Cooldown active; suppress duplicate UNKNOWN spam
+        if existing_unknown:
+            # Update observation evidence in place; do not insert a new row
+            existing_unknown.frame_index = frame_index  # tracks latest observed frame
+            existing_unknown.recorded_at = datetime.now(timezone.utc)
+            db.commit()
+            db.refresh(existing_unknown)
+            return existing_unknown  # return updated record; no duplicate created
 
     is_accepted = (status == MatchStatus.PRESENT.value and
                    match.student_id is not None)
@@ -93,6 +100,7 @@ def record_attendance(
     db.commit()
     db.refresh(event)
     return event
+
 
 
 def create_session(db: DBSession, name: str, notes: str = "") -> AttendanceSession:
@@ -201,7 +209,17 @@ def teacher_review(
     reason: str,
     reviewer_note: str = "",
 ) -> ReviewEvent:
-    """Record a teacher correction with full audit trail."""
+    """Record a teacher correction with full audit trail.
+
+    The corrected_status is written back to the AttendanceEvent.status so the
+    item is removed from the pending REVIEW_REQUIRED queue. The original status
+    and teacher decision are both preserved in the ReviewEvent audit row.
+
+    Accepted statuses: PRESENT, REJECTED, DISMISSED.
+    - PRESENT: marks student accepted for the session (deduplicated).
+    - REJECTED: explicitly confirms the face does not belong to any enrolled student.
+    - DISMISSED: closes the item without a final verdict (e.g., camera artefact).
+    """
     event = db.query(AttendanceEvent).filter_by(id=event_id).first()
     if not event:
         raise ValueError(f"AttendanceEvent {event_id} not found.")
@@ -212,12 +230,17 @@ def teacher_review(
         reason=reason,
         reviewer_note=reviewer_note,
     )
-    # Update accepted flag if corrected to PRESENT
+    # Update the event status so it leaves the pending queue
     if corrected_status == "PRESENT" and event.student_id:
         if not has_accepted_attendance(db, event.student_id, event.session_id):
             event.status = corrected_status
             event.is_accepted = True
+    elif corrected_status in ("REJECTED", "DISMISSED"):
+        # Store the teacher decision; mark not accepted so it cannot become PRESENT
+        event.status = corrected_status
+        event.is_accepted = False
     db.add(review)
     db.commit()
     db.refresh(review)
     return review
+

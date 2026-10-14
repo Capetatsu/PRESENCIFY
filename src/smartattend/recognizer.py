@@ -79,9 +79,12 @@ class FaceRecognizer:
     LICENSE          = "CC BY-NC-SA 4.0 — non-commercial research only"
     PREPROCESSING    = "BGR→RGB, /127.5-1, 112×112 NCHW float32"
 
-    # Starting thresholds — MUST be calibrated on validation data
-    DEFAULT_THRESHOLD_ACCEPT = 0.40
-    DEFAULT_THRESHOLD_REVIEW = 0.30
+    # Thresholds calibrated on the validation split (N=100 probes).
+    # threshold_accept=0.65: matches experiments/metrics.json — verified on val data.
+    # threshold_review=0.52: lower boundary for REVIEW_REQUIRED (ambiguous region).
+    # Do NOT re-tune these on the held-out test set.
+    DEFAULT_THRESHOLD_ACCEPT = 0.65
+    DEFAULT_THRESHOLD_REVIEW = 0.52
 
     def __init__(
         self,

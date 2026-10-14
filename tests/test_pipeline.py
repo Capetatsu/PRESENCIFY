@@ -371,7 +371,233 @@ class TestDatabase:
         assert evt.is_accepted is False
 
 
+# ── Attendance Logic and Review Queue Tests ────────────────────────────────────
+
+class TestAttendanceLogicAndReviewQueue:
+    """Tests for: per-student deduplication, UNKNOWN upsert, temporal integrity,
+    teacher audit trail, confirmed-attendance immutability, and artifact integrity."""
+
+    def _make_match(self, status, student_id=None, student_name=None, similarity=0.75):
+        from smartattend.recognizer import MatchResult, MatchStatus
+        return MatchResult(
+            status=status,
+            student_id=student_id,
+            student_name=student_name,
+            similarity=similarity,
+            threshold_accept=0.65,
+            threshold_review=0.52,
+            latency_ms=10.0,
+        )
+
+    def test_repeated_frames_create_only_one_present_record(self, db):
+        """Requirement 1: Repeated camera frames for same student produce exactly one
+        accepted PRESENT record per session — not one per frame."""
+        student = enroll_student(db, "Iris Newton", "RQ001", consent=True)
+        sess = create_session(db, "Repeat frames test")
+        match = self._make_match(MatchStatus.PRESENT, student.id, student.display_name, 0.80)
+
+        # Simulate 5 identical frames all triggering record_attendance
+        results = [record_attendance(db, sess.id, match, frame_index=i) for i in range(5)]
+
+        # Only the first call should create a record; subsequent ones return None
+        non_none = [r for r in results if r is not None]
+        assert len(non_none) == 1, f"Expected 1 PRESENT record, got {len(non_none)}"
+        assert non_none[0].is_accepted is True
+        assert non_none[0].student_id == student.id
+
+        # Verify DB count
+        count = db.query(AttendanceEvent).filter_by(
+            session_id=sess.id, student_id=student.id, status="PRESENT"
+        ).count()
+        assert count == 1, f"DB must contain exactly 1 PRESENT record, found {count}"
+
+    def test_repeated_uncertain_frames_create_only_one_review_item_per_student(self, db):
+        """Requirement 2: Repeated borderline-confidence frames for same student create
+        exactly one REVIEW_REQUIRED entry per student per session."""
+        student = enroll_student(db, "Jay Turing", "RQ002", consent=True)
+        sess = create_session(db, "Review dedup test")
+        match = self._make_match(MatchStatus.REVIEW_REQUIRED, student.id, student.display_name, 0.58)
+
+        results = [record_attendance(db, sess.id, match, frame_index=i) for i in range(5)]
+        non_none = [r for r in results if r is not None]
+        assert len(non_none) == 1, f"Expected 1 REVIEW_REQUIRED record, got {len(non_none)}"
+
+        count = db.query(AttendanceEvent).filter_by(
+            session_id=sess.id, student_id=student.id, status="REVIEW_REQUIRED"
+        ).count()
+        assert count == 1, f"DB must contain exactly 1 REVIEW_REQUIRED record, found {count}"
+
+    def test_repeated_unknown_observations_create_exactly_one_record_per_session(self, db):
+        """Requirement 3: Repeated UNKNOWN observations (unrecognised face) are upserted —
+        they update the single existing record in place, never inserting additional rows."""
+        sess = create_session(db, "Unknown upsert test")
+        match = self._make_match(MatchStatus.UNKNOWN, student_id=None, student_name=None, similarity=0.10)
+
+        # Simulate 10 UNKNOWN frames across one session
+        for i in range(10):
+            record_attendance(db, sess.id, match, frame_index=i)
+
+        count = db.query(AttendanceEvent).filter_by(
+            session_id=sess.id, status="UNKNOWN"
+        ).count()
+        assert count == 1, (
+            f"UNKNOWN upsert must maintain exactly 1 record per session, but found {count}. "
+            "Repeated observations should update in place."
+        )
+
+        # Verify frame_index was updated (should reflect the last frame, not frame 0)
+        evt = db.query(AttendanceEvent).filter_by(
+            session_id=sess.id, status="UNKNOWN"
+        ).first()
+        assert evt.frame_index == 9, (
+            f"frame_index should reflect latest observation (9), got {evt.frame_index}"
+        )
+
+    def test_unknown_observations_never_assign_student_absent_or_present(self, db):
+        """Requirement 4: An UNKNOWN observation must never assign a student identity,
+        set is_accepted=True, or imply any student's absence."""
+        student = enroll_student(db, "Kai Lovelace", "RQ003", consent=True)
+        sess = create_session(db, "Unknown no-assign test")
+        match = self._make_match(MatchStatus.UNKNOWN, student_id=None, student_name=None, similarity=0.02)
+
+        evt = record_attendance(db, sess.id, match, frame_index=0)
+
+        assert evt is not None
+        assert evt.student_id is None, "UNKNOWN event must not assign any student_id"
+        assert evt.is_accepted is False, "UNKNOWN event must never be accepted"
+        assert evt.status == "UNKNOWN"
+
+        # Absence is NOT recorded — student has no PRESENT or ABSENT record
+        absent_or_present = db.query(AttendanceEvent).filter(
+            AttendanceEvent.session_id == sess.id,
+            AttendanceEvent.student_id == student.id,
+        ).count()
+        assert absent_or_present == 0, (
+            "UNKNOWN observation must not create any record linking to the enrolled student"
+        )
+
+    def test_teacher_review_removes_item_from_pending_queue_and_preserves_audit_trail(self, db):
+        """Requirement 5: After teacher resolves an event (PRESENT/REJECTED/DISMISSED),
+        it must no longer appear in REVIEW_REQUIRED pending results, but the
+        ReviewEvent audit record must still exist."""
+        from smartattend.database import ReviewEvent
+        student = enroll_student(db, "Lena Hopper", "RQ004", consent=True)
+        sess = create_session(db, "Audit trail test")
+        match = self._make_match(MatchStatus.REVIEW_REQUIRED, student.id, student.display_name, 0.60)
+
+        evt = record_attendance(db, sess.id, match, frame_index=0)
+        assert evt is not None
+        assert evt.status == "REVIEW_REQUIRED"
+
+        # Teacher resolves it as REJECTED
+        review = teacher_review(db, evt.id, "REJECTED", "not matching in person")
+
+        # Item must no longer appear as REVIEW_REQUIRED
+        still_pending = db.query(AttendanceEvent).filter_by(
+            session_id=sess.id, status="REVIEW_REQUIRED", is_accepted=False
+        ).count()
+        assert still_pending == 0, (
+            "Resolved REVIEW_REQUIRED item must not appear in pending query after teacher_review"
+        )
+
+        # Event status must be updated to REJECTED
+        db.refresh(evt)
+        assert evt.status == "REJECTED", f"Expected status=REJECTED, got {evt.status}"
+
+        # Audit trail (ReviewEvent) must be preserved with original status
+        audit_record = db.query(ReviewEvent).filter_by(attendance_event_id=evt.id).first()
+        assert audit_record is not None, "ReviewEvent audit record must be preserved"
+        assert audit_record.original_status == "REVIEW_REQUIRED"
+        assert audit_record.corrected_status == "REJECTED"
+        assert audit_record.reason == "not matching in person"
+
+    def test_teacher_dismiss_also_removes_from_pending_queue(self, db):
+        """Requirement 5 (dismiss variant): Dismissed items also leave the review queue."""
+        student = enroll_student(db, "Mia Shannon", "RQ005", consent=True)
+        sess = create_session(db, "Dismiss test")
+        match = self._make_match(MatchStatus.REVIEW_REQUIRED, student.id, student.display_name, 0.55)
+
+        evt = record_attendance(db, sess.id, match, frame_index=0)
+        teacher_review(db, evt.id, "DISMISSED", "camera artefact")
+
+        still_pending = db.query(AttendanceEvent).filter_by(
+            session_id=sess.id, status="REVIEW_REQUIRED"
+        ).count()
+        assert still_pending == 0
+
+        db.refresh(evt)
+        assert evt.status == "DISMISSED"
+
+    def test_confirmed_present_cannot_be_overwritten_by_conflicting_identity(self, db):
+        """Requirement 6: Once a student is confirmed PRESENT (is_accepted=True),
+        a subsequent call claiming a different student identity for the same session
+        must not overwrite or conflict with the confirmed record."""
+        student_a = enroll_student(db, "Nina Curie", "RQ006A", consent=True)
+        student_b = enroll_student(db, "Omar Faraday", "RQ006B", consent=True)
+        sess = create_session(db, "Overwrite protection test")
+
+        # Student A confirmed present
+        match_a = self._make_match(MatchStatus.PRESENT, student_a.id, student_a.display_name, 0.85)
+        evt_a = record_attendance(db, sess.id, match_a, frame_index=0)
+        assert evt_a is not None and evt_a.is_accepted is True
+
+        # Student B also confirmed present (independent — should succeed)
+        match_b = self._make_match(MatchStatus.PRESENT, student_b.id, student_b.display_name, 0.80)
+        evt_b = record_attendance(db, sess.id, match_b, frame_index=10)
+        assert evt_b is not None and evt_b.is_accepted is True
+
+        # A second PRESENT attempt for student A must be blocked (no overwrite, no duplicate)
+        match_a2 = self._make_match(MatchStatus.PRESENT, student_a.id, student_a.display_name, 0.70)
+        evt_a2 = record_attendance(db, sess.id, match_a2, frame_index=20)
+        assert evt_a2 is None, "Duplicate PRESENT for already-confirmed student must be blocked"
+
+        # DB must still have exactly 1 accepted PRESENT per student
+        count_a = db.query(AttendanceEvent).filter_by(
+            session_id=sess.id, student_id=student_a.id, status="PRESENT", is_accepted=True
+        ).count()
+        count_b = db.query(AttendanceEvent).filter_by(
+            session_id=sess.id, student_id=student_b.id, status="PRESENT", is_accepted=True
+        ).count()
+        assert count_a == 1, f"Student A must have exactly 1 PRESENT record, found {count_a}"
+        assert count_b == 1, f"Student B must have exactly 1 PRESENT record, found {count_b}"
+
+    def test_canonical_experiment_artifacts_are_intact(self):
+        """Requirement 7: Canonical evaluation files must not be altered by code changes.
+        Checks that metrics.json and predictions_anonymized.csv still exist and contain
+        expected values matching the documented research results."""
+        import json
+        from pathlib import Path
+
+        repo_root = Path(__file__).parents[1]
+        metrics_path = repo_root / "experiments" / "metrics.json"
+        predictions_path = repo_root / "experiments" / "predictions_anonymized.csv"
+
+        assert metrics_path.exists(), f"metrics.json not found at {metrics_path}"
+        assert predictions_path.exists(), f"predictions_anonymized.csv not found at {predictions_path}"
+
+        with open(metrics_path) as f:
+            metrics = json.load(f)
+
+        # Verify canonical threshold values from the research evaluation
+        assert metrics["metadata"]["threshold_accept"] == 0.65, (
+            "Canonical threshold_accept in metrics.json must remain 0.65"
+        )
+        assert metrics["metadata"]["threshold_review"] == 0.52, (
+            "Canonical threshold_review in metrics.json must remain 0.52"
+        )
+        assert metrics["metadata"]["total_test_probes"] == 166
+        assert metrics["method_A_recognition_only"]["true_accepts_identity"] == 65
+
+        # Verify predictions CSV has correct row count
+        lines = predictions_path.read_text().strip().splitlines()
+        data_rows = len(lines) - 1  # subtract header
+        assert data_rows == 166, (
+            f"predictions_anonymized.csv must have 166 data rows, found {data_rows}"
+        )
+
+
 # ── Bug Fixes & Regression Suite ─────────────────────────────────────────────
+
 
 class TestBugFixesRegression:
 
@@ -424,7 +650,10 @@ class TestBugFixesRegression:
         assert sim_val is None
 
     def test_record_attendance_deduplicates_unknown_with_cooldown(self, db):
-        """Bug 3: Verify UNKNOWN events are rate-limited so they don't spam duplicate records."""
+        """Bug 3 (updated): Verify UNKNOWN events are upserted — the second observation
+        updates the existing record in place rather than inserting a new row.
+        The return value is the updated existing record (not None), and DB count stays at 1.
+        """
         sess = create_session(db, "Test Unknown Cooldown")
         from smartattend.recognizer import MatchResult, MatchStatus
 
@@ -439,17 +668,22 @@ class TestBugFixesRegression:
         )
 
         # First UNKNOWN record: should be stored
-        evt1 = record_attendance(db, sess.id, match, frame_index=0, cooldown_seconds=30)
+        evt1 = record_attendance(db, sess.id, match, frame_index=0)
         assert evt1 is not None
         assert evt1.status == "UNKNOWN"
 
-        # Immediate second UNKNOWN record within cooldown: must be blocked (return None)
-        evt2 = record_attendance(db, sess.id, match, frame_index=10, cooldown_seconds=30)
-        assert evt2 is None, "Immediate duplicate UNKNOWN event must be suppressed by cooldown"
+        # Second UNKNOWN call: must NOT create a new row — returns the existing updated record
+        evt2 = record_attendance(db, sess.id, match, frame_index=10)
+        assert evt2 is not None, "Second UNKNOWN call should return existing upserted record (not None)"
+        assert evt2.id == evt1.id, "Second UNKNOWN call must return the same record (upsert, not new row)"
+        assert evt2.frame_index == 10, "Upserted record must have updated frame_index"
 
-        # Call with cooldown_seconds=0: should allow persistence
-        evt3 = record_attendance(db, sess.id, match, frame_index=20, cooldown_seconds=0)
-        assert evt3 is not None, "When cooldown_seconds=0, UNKNOWN event should be persisted"
+        # DB must still contain exactly 1 UNKNOWN record for this session
+        count = db.query(AttendanceEvent).filter_by(
+            session_id=sess.id, status="UNKNOWN"
+        ).count()
+        assert count == 1, f"Upsert must keep exactly 1 UNKNOWN record per session, found {count}"
+
 
     def test_record_attendance_deduplicates_review_required(self, db):
         """Bug 3: Verify REVIEW_REQUIRED items are deduplicated per student per session."""
